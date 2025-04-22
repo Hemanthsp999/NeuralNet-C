@@ -1,10 +1,18 @@
 #ifndef Neural_
 #define Neural_
 
+#define Dim(a) (sizeof(a) / sizeof(a[0]))
+
 typedef struct {
         float val;
         float *weight;
 } Neuron;
+
+typedef struct {
+        float **data;
+        int rows;
+        int cols;
+} matrix;
 
 typedef struct {
         int input_layers;
@@ -18,5 +26,11 @@ typedef struct {
         float *input_to_hidden_bias;
         float *hidden_to_output_bias;
 } weight_bias_map;
+
+matrix *Matrix_Multiplication(matrix, matrix);
+matrix *Matrix_Addition(matrix, matrix);
+matrix *Transpose(matrix);
+
+Neuron Map_weight_to_neurons(Neuron);
 
 #endif

@@ -4,7 +4,7 @@ CFLAGS = -g -Wall -pg -Wextra -Werror -I.
 LDFLAGS = -lm
 
 # Source files
-SRCS = main.c 
+SRCS = main.c Neural/neural.c Neural/neural.h
 OBJS = $(SRCS:.c=.o)
 
 # Targets
