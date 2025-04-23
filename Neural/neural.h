@@ -20,17 +20,20 @@ typedef struct {
         int output_layers;
 } Layers;
 
+/*
 typedef struct {
-        float *input_to_hidden_weights;
-        float *hidden_to_output_weights;
-        float *input_to_hidden_bias;
-        float *hidden_to_output_bias;
+        float **input_to_hidden_weights;
+        float **hidden_to_output_weights;
+        float **input_to_hidden_bias;
+        float **hidden_to_output_bias;
 } weight_bias_map;
+*/
 
 matrix *Matrix_Multiplication(matrix, matrix);
 matrix *Matrix_Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
-Neuron Map_weight_to_neurons(Neuron);
+Neuron *input_neuron_weights(Neuron *, Layers);
+Neuron *Feed_Forward_Network(Neuron *, Layers, int);
 
 #endif
