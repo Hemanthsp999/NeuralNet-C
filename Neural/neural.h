@@ -1,7 +1,14 @@
+#include <stdio.h>
 #ifndef Neural_
 #define Neural_
 
 #define Dim(a) (sizeof(a) / sizeof(a[0]))
+
+typedef struct {
+        float **data;
+        size_t rows;
+        size_t cols;
+} matrix;
 
 typedef struct {
         float val;
@@ -9,31 +16,21 @@ typedef struct {
 } Neuron;
 
 typedef struct {
-        float **data;
-        int rows;
-        int cols;
-} matrix;
+        int num_neurons;
+        Neuron *neurons; // holds the number of neurons of the one layer
+} Layer;
 
 typedef struct {
-        int input_layers;
-        int hidden_layers;
-        int output_layers;
-} Layers;
+        size_t num_layers;
+        Layer *neural_layers;
+} neural_network;
 
-/*
-typedef struct {
-        float **input_to_hidden_weights;
-        float **hidden_to_output_weights;
-        float **input_to_hidden_bias;
-        float **hidden_to_output_bias;
-} weight_bias_map;
-*/
-
-matrix *Matrix_Multiplication(matrix, matrix);
-matrix *Matrix_Addition(matrix, matrix);
+matrix *Multiplication(matrix, matrix);
+matrix *Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
-Neuron *input_neuron_weights(Neuron *, Layers);
-Neuron *Feed_Forward_Network(Neuron *, Layers, int);
+neural_network *Feed_Forward_Network(size_t *, size_t);
+void forward_pass(neural_network*, float*, int);
+float assign_random_value(int);
 
 #endif

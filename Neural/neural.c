@@ -3,7 +3,11 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-matrix *Matrix_Multiplication(matrix mat1, matrix mat2) {
+float assign_random_value(int threshold) {
+        return (float)(rand() % (threshold + 1)) / threshold;
+}
+
+matrix *Multiplication(matrix mat1, matrix mat2) {
 
         if (mat1.cols != mat2.rows) {
                 fprintf(stderr, "%s\n",
@@ -12,7 +16,7 @@ matrix *Matrix_Multiplication(matrix mat1, matrix mat2) {
                 assert(mat1.cols != mat2.rows);
         }
 
-        printf("Matrix 1 of Dimension: %d\t Matrix 2 of Dimension: %d\n",
+        printf("Matrix 1 of Dimension: %ld\t Matrix 2 of Dimension: %ld\n",
                mat1.rows, mat2.rows);
 
         matrix *resultant = (matrix *)malloc(sizeof(matrix));
@@ -21,15 +25,15 @@ matrix *Matrix_Multiplication(matrix mat1, matrix mat2) {
 
         resultant->data = (float **)malloc(resultant->rows * sizeof(float *));
 
-        for (int i = 0; i < resultant->rows; i++) {
+        for (size_t i = 0; i < resultant->rows; i++) {
                 resultant->data[i] =
                     (float *)calloc(resultant->cols, sizeof(float));
         }
 
-        for (int i = 0; i < mat1.rows; i++) {
-                for (int j = 0; j < mat2.cols; j++) {
+        for (size_t i = 0; i < mat1.rows; i++) {
+                for (size_t j = 0; j < mat2.cols; j++) {
                         resultant->data[i][j] = 0;
-                        for (int k = 0; k < mat1.cols; k++) {
+                        for (size_t k = 0; k < mat1.cols; k++) {
                                 resultant->data[i][j] +=
                                     mat1.data[i][k] * mat2.data[k][j];
                         }
@@ -39,7 +43,7 @@ matrix *Matrix_Multiplication(matrix mat1, matrix mat2) {
         return resultant;
 }
 
-matrix *Matrix_Addition(matrix mat1, matrix mat2) {
+matrix *Addition(matrix mat1, matrix mat2) {
         if (mat1.rows != mat2.rows || mat1.cols != mat2.cols) {
                 fprintf(
                     stderr, "%s\n",
@@ -55,13 +59,13 @@ matrix *Matrix_Addition(matrix mat1, matrix mat2) {
 
         resultant->data = (float **)malloc(resultant->rows * sizeof(float *));
 
-        for (int i = 0; i < resultant->rows; i++) {
+        for (size_t i = 0; i < resultant->rows; i++) {
                 resultant->data[i] =
                     (float *)calloc(resultant->cols, sizeof(float));
         }
 
-        for (int i = 0; i < mat1.rows; i++) {
-                for (int j = 0; j < mat2.cols; j++) {
+        for (size_t i = 0; i < mat1.rows; i++) {
+                for (size_t j = 0; j < mat2.cols; j++) {
                         resultant->data[i][j] =
                             mat1.data[i][j] + mat2.data[i][j];
                 }
@@ -82,13 +86,13 @@ matrix *Transpose(matrix mat1) {
         resultant->cols = mat1.rows;
 
         resultant->data = (float **)malloc(resultant->rows * sizeof(float *));
-        for (int i = 0; i < resultant->rows; i++) {
+        for (size_t i = 0; i < resultant->rows; i++) {
                 resultant->data[i] =
                     (float *)malloc(resultant->cols * sizeof(float));
         }
 
-        for (int i = 0; i < mat1.rows; i++) {
-                for (int j = 0; j < mat1.cols; j++) {
+        for (size_t i = 0; i < mat1.rows; i++) {
+                for (size_t j = 0; j < mat1.cols; j++) {
                         resultant->data[j][i] = mat1.data[i][j];
                 }
         }
@@ -96,56 +100,77 @@ matrix *Transpose(matrix mat1) {
         return resultant;
 }
 
-Neuron *input_neuron_weights(Neuron *neuron, Layers layer) {
+neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
+
+        neural_network *network =
+            (neural_network *)malloc(sizeof(neural_network));
+
+        network->num_layers = num_layers;
+        network->neural_layers = (Layer *)malloc(num_layers * sizeof(Layer));
 
         const int threshold = 1000;
 
-        if (neuron == NULL) {
-                fprintf(stderr, "%s\n",
-                        "Memory is not allocated for input_neuron");
-                assert(neuron == NULL);
-                exit(EXIT_FAILURE);
+        for (size_t i = 0; i < num_layers; i++) {
+                network->neural_layers[i].num_neurons = layer_size[i];
+                // Allocate memory for neurons
+                network->neural_layers[i].neurons =
+                    (Neuron *)malloc(layer_size[i] * sizeof(Neuron));
+
+                // iterate over neurons in a layer
+                for (size_t n = 0; n < layer_size[i]; n++) {
+                        network->neural_layers[i].neurons[n].val = 0.f;
+
+                        if (i < num_layers - 1) {
+                                network->neural_layers[i].neurons[n].weight =
+                                    (float *)malloc(layer_size[i + 1] *
+                                                    sizeof(float));
+
+                                /* assign value for each neuron; always check
+                                 * for i+1 layer cause present neuron weight
+                                 * combination is dependent on num of neurons in
+                                 * next layer
+                                 */
+                                for (size_t w = 0; w < layer_size[i + 1]; w++) {
+                                        // assign weight for each neuron
+                                        network->neural_layers[i]
+                                            .neurons[n]
+                                            .weight[w] =
+                                            assign_random_value(threshold);
+                                }
+                        } else {
+                                // output layer don't have any weight. set it to
+                                // null
+                                network->neural_layers[i].neurons[n].weight =
+                                    NULL;
+                        }
+                }
         }
 
-        /* input neuron weights is direclty proportional to hidden_layer neurons
-         */
-        neuron->weight = (float *)malloc(layer.hidden_layers * sizeof(float));
-
-        for (int i = 0; i < layer.hidden_layers; i++) {
-                neuron->weight[i] =
-                    (float)((rand()) % (threshold + 1)) / threshold;
-        }
-
-        return neuron;
+        return network;
 }
 
-Neuron *Feed_Forward_Network(Neuron *input_neuron, Layers layer, int bias) {
-        if (!input_neuron) {
-                fprintf(stderr, "%s\n",
-                        "Weight of hidden/input neuron is Zero");
-                assert(!input_neuron->weight);
-        }
-        /* FNN(x) = x.weight+bias*/
-        const int threshold = 1000;
+void forward_pass(neural_network *network, float *input, int bias) {
 
-        Neuron *hidden_neuron = malloc(layer.hidden_layers * sizeof(Neuron));
-        hidden_neuron->weight = (float *)malloc(sizeof(float));
-
-        for (int i = 0; i < layer.hidden_layers; i++) {
-                hidden_neuron[i].weight =
-                    (float *)malloc(layer.hidden_layers * sizeof(float));
+        //  add value to  input layer of neuron
+        for (int i = 0; i < network->neural_layers[0].num_neurons; i++) {
+                network->neural_layers[0].neurons[i].val = input[i];
         }
 
-        for (int i = 0; i < layer.hidden_layers; i++) {
-                float sum = 0.f;
-                for (int j = 0; j < layer.input_layers; j++) {
-                        sum += input_neuron[i].val * input_neuron[i].weight[j];
+        for (size_t i = 0; i < network->num_layers - 1; i++) {
+
+                Layer *current_layer = &network->neural_layers[i];
+                Layer *next_layer = &network->neural_layers[i + 1];
+
+                for (int j = 0; j < next_layer->num_neurons; j++) {
+                        float sum = 0.f;
+                        for (int k = 0; k < current_layer->num_neurons; k++) {
+                                sum +=
+                                    network->neural_layers[i].neurons[k].val *
+                                    network->neural_layers[i]
+                                        .neurons[k]
+                                        .weight[j];
+                        }
+                        next_layer->neurons[j].val = sum + bias;
                 }
-
-                hidden_neuron[i].val = sum + bias;
-                hidden_neuron[i].weight[i] =
-                    (float)((rand()) % (threshold + 1)) / threshold;
         }
-
-        return hidden_neuron;
 }
