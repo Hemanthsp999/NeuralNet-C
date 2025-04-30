@@ -1,11 +1,15 @@
+/* activation.h */
 #ifndef Activation_
 #define Activation_
+#include "../Neural/neural.h"
 
-const int zero = 0;
-#define max(zero, x) ((x > zero) ? x : zero)
-
-double SigmoidFunc(double x);
-double tan_h(double x);
-double relu(double);
+float sigmoid(float);
+float sigmoid_derivative(float);
+float tan_h(float);
+float tanh_derivative(float);
+float relu(float);
+float categorical_cross_entropy(Layer *, Layer *);
+float binary_cross_entropy(Layer *, Layer *);
+void soft_max(Layer *);
 
 #endif
