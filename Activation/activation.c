@@ -25,7 +25,7 @@ float categorical_cross_entropy(Layer *expected_output,
         float sum = 0.f;
         float epsilon = 1e-8f;
 
-        for (int i = 0; i < predicted_output->num_neurons; i++) {
+        for (size_t i = 0; i < predicted_output->num_neurons; i++) {
                 float p = predicted_output->neurons[i].val;
                 float y = expected_output->neurons[i].val;
                 p = fmax(p, epsilon);
@@ -81,7 +81,7 @@ void soft_max(Layer *output_layer_vals) {
         float max_val = output_layer_vals->neurons[0].val;
 
         // check for numerical stability
-        for (int i = 0; i < n; i++) {
+        for (size_t i = 0; i < n; i++) {
                 if (output_layer_vals->neurons[i].val > max_val)
                         max_val = output_layer_vals->neurons[i].val;
         }
