@@ -1,3 +1,4 @@
+/* neural.h */
 #include <stdio.h>
 #ifndef Neural_
 #define Neural_
@@ -12,17 +13,19 @@ typedef struct {
 
 typedef struct {
         float val;
+        float bias;
         float *weight;
 } Neuron;
 
 typedef struct {
-        int num_neurons;
-        Neuron *neurons; // holds the number of neurons of the one layer
+        size_t num_neurons; // holds the number of neurons in the layer
+        Neuron *neurons;    // holds neuron val and weight
 } Layer;
 
 typedef struct {
         size_t num_layers;
-        Layer *neural_layers;
+        Layer *neural_layers; /* is a pointer to array, helps to trace the layer
+                                 wise neurons and perform forwardpass */
 } neural_network;
 
 matrix *Multiplication(matrix, matrix);
@@ -30,7 +33,8 @@ matrix *Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
 neural_network *Feed_Forward_Network(size_t *, size_t);
-void forward_pass(neural_network*, float*, int);
+neural_network *back_propagation(neural_network *);
+void forward_pass(neural_network *, float *);
 float assign_random_value(int);
 
 #endif
