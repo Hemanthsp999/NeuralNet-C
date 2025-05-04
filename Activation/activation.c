@@ -13,6 +13,26 @@ float tanh_derivative(float x) { return 1.0 - powf(tan_h(x), 2); }
 
 float relu(float x) { return (x > 0) ? x : 0; }
 
+float mse(Layer *output_expected, Layer *output_predicted) {
+        if (!output_expected || !output_predicted) {
+                fprintf(stderr, "The given var has no contents\n");
+                assert(!output_expected || !output_predicted);
+        }
+
+        size_t n = output_predicted->num_neurons;
+        float sum = 0.f;
+
+        for (size_t i = 0; i < n; i++) {
+                float var = 0.f;
+                var = output_expected->neurons[i].val -
+                      output_predicted->neurons[i].val;
+
+                sum += powf(var, 2);
+        }
+
+        return (sum / n);
+}
+
 /* returns multi-class labels */
 float categorical_cross_entropy(Layer *expected_output,
                                 Layer *predicted_output) {
