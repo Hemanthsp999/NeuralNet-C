@@ -5,7 +5,10 @@
 
 float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
 
-float sigmoid_derivative(float x) { return sigmoid(x) * (1 - sigmoid(x)); }
+float sigmoid_derivative(float x) {
+        float s = sigmoid(x);
+        return s * (1 - s);
+}
 
 float tan_h(float x) { return tanhf(x); }
 
@@ -23,14 +26,14 @@ float mse(Layer *output_expected, Layer *output_predicted) {
         float sum = 0.f;
 
         for (size_t i = 0; i < n; i++) {
-                float var = 0.f;
-                var = output_expected->neurons[i].val -
-                      output_predicted->neurons[i].val;
+                float diff = 0.f;
+                diff = output_expected->neurons[i].val -
+                       output_predicted->neurons[i].val;
 
-                sum += powf(var, 2);
+                sum += diff * diff;
         }
 
-        return (sum / n);
+        return sum / n;
 }
 
 /* returns multi-class labels */
