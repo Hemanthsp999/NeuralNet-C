@@ -14,6 +14,7 @@ typedef struct {
 typedef struct {
         float val;
         float bias;
+        float deltas;
         float *weight;
 } Neuron;
 
@@ -25,7 +26,7 @@ typedef struct {
 typedef struct {
         size_t num_layers;
         Layer *neural_layers; /* is a pointer to array, helps to trace the layer
-                                 wise neurons and perform forwardpass */
+                                     wise neurons and perform forwardpass */
 } neural_network;
 
 matrix *Multiplication(matrix, matrix);
@@ -33,7 +34,7 @@ matrix *Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
 neural_network *Feed_Forward_Network(size_t *, size_t);
-neural_network *back_propagation(neural_network *);
+neural_network *back_propagation(neural_network *, Layer *, Layer *);
 void forward_pass(neural_network *, float *);
 float assign_random_value(int);
 
