@@ -3,6 +3,7 @@
 #include <assert.h>
 #include <math.h>
 
+/* returns sigmoid func (scales from 0 - 1)*/
 float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
 
 float sigmoid_derivative(float x) {
