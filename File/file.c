@@ -89,6 +89,11 @@ dataset_handler *load_dataset(const char *file_path) {
                 fprintf(stderr, "Error while allocating memory for X and Y.\n");
                 assert(handler->Y);
         }
+        /* Initialize other fields to null*/
+        handler->x_train = NULL;
+        handler->x_test = NULL;
+        handler->y_train = NULL;
+        handler->y_test = NULL;
 
         for (size_t i = 0; i < samples; i++) {
                 handler->X[i] = (float *)calloc(input_features, sizeof(float));
@@ -123,12 +128,7 @@ dataset_handler *load_dataset(const char *file_path) {
                 row++;
         }
 
-        _Bool isClose = fclose(file);
-        if (!isClose) {
-                fprintf(stderr,
-                        "Error, The File is not closed, its still open.\n");
-                assert(!isClose);
-        }
+        fclose(file);
 
         handler->input_features = input_features;
         handler->output_labels = output_labels;
@@ -144,11 +144,12 @@ dataset_handler *train_test_split(dataset_handler *dataset, float test_size,
                 assert(!dataset);
         }
 
-        dataset_handler *shuffled_data =
+        // dataset_handler *shuffled_data =
+        dataset =
             shuffle_dataset(dataset->X, dataset->Y, test_size, dataset->samples,
                             random_state, dataset->input_features);
 
-        return shuffled_data;
+        return dataset;
 }
 
 dataset_handler *shuffle_dataset(float **X, char **Y, float test_size,
@@ -175,7 +176,7 @@ dataset_handler *shuffle_dataset(float **X, char **Y, float test_size,
         }
         srand(random_state);
 
-        /* shuffle the data */
+        /* shuffle the data and swap indices */
         for (int i = total_samples - 1; i > 0; i--) {
                 size_t j = rand() % (i + 1);
                 size_t tmp = indices[i];
@@ -183,11 +184,12 @@ dataset_handler *shuffle_dataset(float **X, char **Y, float test_size,
                 indices[j] = tmp;
         }
 
-        printf("The given test size: %f\n", test_size);
+        printf("Split size (Test size(20)): %f\n", test_size);
 
         dataset_handler *new_data =
             (dataset_handler *)malloc(sizeof(dataset_handler));
 
+        /* Initialize all values to 0 */
         memset(new_data, 0, sizeof(dataset_handler));
 
         if (!new_data) {
@@ -215,6 +217,7 @@ dataset_handler *shuffle_dataset(float **X, char **Y, float test_size,
                 for (size_t j = 0; j < input_features; j++) {
                         new_data->x_train[i][j] = X[indices[i]][j];
                 }
+                /* copy entire Y pointer to y_train */
                 new_data->y_train[i] = strdup(Y[indices[i]]);
         }
 
@@ -225,19 +228,22 @@ dataset_handler *shuffle_dataset(float **X, char **Y, float test_size,
                         new_data->x_test[i][j] =
                             X[indices[train_samples + i]][j];
                 }
+                /* copy entire Y pointer to y_test */
                 new_data->y_test[i] = strdup(Y[indices[train_samples + i]]);
         }
-        new_data->X = (float **)malloc(samples * sizeof(float));
-        new_data->Y = (char **)malloc(samples * sizeof(char));
+        /*
+            new_data->X = (float **)malloc(samples * sizeof(float));
+            new_data->Y = (char **)malloc(samples * sizeof(char));
 
-        for (size_t i = 0; i < samples; i++) {
-                new_data->X[i] = calloc(input_features, sizeof(float));
-                for (size_t j = 0; j < input_features; j++) {
-                        new_data->X[i][j] = X[i][j];
-                }
+            for (size_t i = 0; i < samples; i++) {
+                    new_data->X[i] = calloc(input_features, sizeof(float));
+                    for (size_t j = 0; j < input_features; j++) {
+                            new_data->X[i][j] = X[i][j];
+                    }
 
-                new_data->Y[i] = strdup(Y[i]);
-        }
+                    new_data->Y[i] = strdup(Y[i]);
+            }
+        */
         new_data->samples = samples;
         new_data->train_samples = train_samples;
         new_data->test_samples = test_samples;
