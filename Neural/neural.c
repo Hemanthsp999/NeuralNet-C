@@ -225,7 +225,7 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
 }
 
 /* return activated networks */
-void forward_pass(neural_network *network, float *input) {
+neural_network *forward_pass(neural_network *network, float *input) {
         if (!network) {
                 fprintf(stderr, "%s\n", "Network is empty?.");
                 free(network);
@@ -312,6 +312,8 @@ void forward_pass(neural_network *network, float *input) {
                         */
                 }
         }
+
+        return network;
 }
 
 /* returns to previous and alter weights & bias based on percentage of error*/
