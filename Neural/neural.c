@@ -157,6 +157,7 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
                 free(network);
                 assert(!network);
         }
+        printf("Now the function is in Feed_forward_network\n");
 
         network->num_layers = num_layers;
         network->neural_layers = (Layer *)malloc(num_layers * sizeof(Layer));
@@ -169,6 +170,12 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
         }
 
         const int threshold = 1000;
+
+        printf("Number of layers present in Neural Network: %ld\n", num_layers);
+
+        for (size_t i = 0; i < num_layers; i++) {
+                printf("Input present in Layer[%ld]: %ld\n", i, layer_size[i]);
+        }
 
         for (size_t i = 0; i < num_layers; i++) {
                 network->neural_layers[i].num_neurons = layer_size[i];
@@ -221,6 +228,24 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
                 }
         }
 
+        /*
+            for (size_t l = 0; l < num_layers - 1; l++) {
+                    Layer *curr = &network->neural_layers[l];
+                    Layer *nxt = &network->neural_layers[l + 1];
+                    for (size_t n = 0; n < curr->num_neurons; n++) {
+
+                            for (size_t w = 0; w < nxt->num_neurons; w++) {
+                                    printf("Layer[%ld] Neuron[%ld] Bias[%ld]: %f
+           " "weight[%ld][%ld]: %f ", l, n, n, curr->neurons[n].bias, n, w,
+                                           network->neural_layers[l]
+                                               .neurons[n]
+                                               .weight[w]);
+                            }
+                            printf("\n");
+                    }
+            }
+        */
+
         return network;
 }
 
@@ -231,6 +256,18 @@ neural_network *forward_pass(neural_network *network, float *input) {
                 free(network);
                 assert(!network);
         }
+        printf("Now the function is in forward_Pass\n");
+
+        /*
+            for (size_t i = 0; i < network->num_layers; i++) {
+                    Layer *curr = &network->neural_layers[i];
+
+                    for (size_t j = 0; j < curr->num_neurons; j++) {
+                            printf("Current Layer: %ld Neurons: %f\n", i,
+                                   curr->neurons[j].val);
+                    }
+            }
+            */
 
         /*  Initialize values to  input layer of neuron */
         for (size_t i = 0; i < network->neural_layers[0].num_neurons; i++) {
@@ -239,6 +276,7 @@ neural_network *forward_pass(neural_network *network, float *input) {
 
         // assign value to each neurons using weight and value of previous
         for (size_t i = 0; i < network->num_layers - 1; i++) {
+                printf("Processing the forward pass ...\n");
 
                 Layer *current_layer = &network->neural_layers[i];
                 Layer *next_layer = &network->neural_layers[i + 1];
@@ -284,6 +322,10 @@ neural_network *forward_pass(neural_network *network, float *input) {
 
                         for (size_t k = 0; k < current_layer->num_neurons;
                              k++) {
+                                printf("Weights of each neurons: %f ",
+                                       network->neural_layers[i]
+                                           .neurons[k]
+                                           .weight[j]);
                                 sum +=
                                     network->neural_layers[i].neurons[k].val *
                                     network->neural_layers[i]
@@ -299,6 +341,7 @@ neural_network *forward_pass(neural_network *network, float *input) {
                         // pass sum with bias to sigmoid function
                         sum += next_layer->neurons[j].bias;
                         next_layer->neurons[j].val = sigmoid(sum);
+                        printf("\n");
 
                         /*
                         matrix *output_resultant = Addition(
@@ -313,13 +356,27 @@ neural_network *forward_pass(neural_network *network, float *input) {
                 }
         }
 
+        /*
+            for (size_t i = 0; i < network->num_layers; i++) {
+                    Layer *curr = &network->neural_layers[i];
+                    Layer *nxt = &network->neural_layers[i + 1];
+
+                    for (size_t n = 0; n < curr->num_neurons; n++) {
+                            for (size_t j = 0; j < nxt->num_neurons; j++) {
+                                    printf("Layer: %ld, Neuron[%ld]: value: %f",
+           i, n, curr->neurons[n].val);
+                            }
+                    }
+                    printf("\n");
+            }
+            */
+
         return network;
 }
 
 /* returns to previous and alter weights & bias based on percentage of error*/
-neural_network *back_propagation(neural_network *network,
-                                 Layer *output_expected,
-                                 Layer *output_predicted) {
+void back_propagation(neural_network *network, int *output_expected,
+                      Layer *output_predicted) {
         if (!network) {
                 fprintf(stderr, "the network is empyt.\n");
                 free(network);
@@ -337,6 +394,7 @@ neural_network *back_propagation(neural_network *network,
                 free(output_predicted);
                 assert(!output_predicted);
         }
+        printf("Now the function is in Back_Propagation\n");
 
         // number of layers that network contains
         size_t n_layers = network->num_layers;
@@ -348,11 +406,14 @@ neural_network *back_propagation(neural_network *network,
         for (size_t i = 0; i < network->neural_layers[output_idx].num_neurons;
              i++) {
                 float a = output_predicted->neurons[i].val;
-                float y = output_expected->neurons[i].val;
+                float y = (float)output_expected[i];
                 float z_derivative = sigmoid_derivative(a);
 
                 network->neural_layers[output_idx].neurons[i].deltas =
                     (a - y) * z_derivative;
+
+                printf("Output neuron %zu: value=%f, expected=%f, delta=%f\n",
+                       i, a, y, output_predicted->neurons[i].deltas);
         }
 
         // Backpropagate delta
@@ -376,7 +437,7 @@ neural_network *back_propagation(neural_network *network,
                 }
         }
 
-        float learning_rate = 1e-8;
+        float learning_rate = 0.005f;
 
         // update weight
         for (size_t l = 0; l < n_layers - 1; l++) {
@@ -410,5 +471,14 @@ neural_network *back_propagation(neural_network *network,
                             learning_rate * curr_layer->neurons[i].deltas;
                 }
         }
-        return network;
+
+        for (size_t i = 0; i < network->num_layers; i++) {
+
+                for (size_t j = 0; j < network->neural_layers[i].num_neurons;
+                     j++) {
+                        printf("Neuron Value: %f ",
+                               network->neural_layers[i].neurons[j].val);
+                }
+                printf("\n");
+        }
 }

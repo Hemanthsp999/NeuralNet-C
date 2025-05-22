@@ -34,7 +34,7 @@ matrix *Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
 neural_network *Feed_Forward_Network(size_t *, size_t);
-neural_network *back_propagation(neural_network *, Layer *, Layer *);
+void back_propagation(neural_network *, int*, Layer *);
 neural_network *forward_pass(neural_network *, float *);
 float assign_random_value(int);
 
