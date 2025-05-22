@@ -60,7 +60,24 @@ int main() {
         neural_network *construct_network =
             Feed_Forward_Network(layer_values, 4);
 
-        train_network(construct_network, dataset, 1000);
+        /*
+            for (size_t i = 0; i < construct_network->num_layers - 1; i++) {
+                    Layer *curr = &construct_network->neural_layers[i];
+                    Layer *nxt = &construct_network->neural_layers[i + 1];
+
+                    printf("Debug Log\n");
+                    for (size_t n = 0; n < curr->num_neurons; n++) {
+                            for (size_t j = 0; j < nxt->num_neurons; j++) {
+                                    printf("Layer[%ld] Neuron: %ld, Bias[%ld]:
+           %f " "Weight[%ld][%ld]: %f", i, n, n, curr->neurons[n].bias, n, j,
+                                           curr->neurons[n].weight[j]);
+                            }
+                            printf("\n");
+                    }
+            }
+            */
+
+        train_network(construct_network, split_data, 1000);
 
         /*
             free_dataset(dataset);
