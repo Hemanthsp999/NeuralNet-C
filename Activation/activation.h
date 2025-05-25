@@ -10,7 +10,7 @@ float tanh_derivative(float);
 float relu(float);
 float categorical_cross_entropy(Layer *, Layer *);
 float binary_cross_entropy(Layer *, Layer *);
-float mse(Layer *, Layer *);
+float mse(int*, int*, size_t);
 void soft_max(Layer *);
 
 #endif

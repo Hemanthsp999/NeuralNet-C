@@ -17,24 +17,17 @@ float tanh_derivative(float x) { return 1.0 - powf(tan_h(x), 2); }
 
 float relu(float x) { return (x > 0) ? x : 0; }
 
-float mse(Layer *output_expected, Layer *output_predicted) {
-        if (!output_expected || !output_predicted) {
-                fprintf(stderr, "The given var has no contents\n");
-                assert(!output_expected || !output_predicted);
-        }
+float mse(int *predicted_output, int *expected_output, size_t num_classes) {
 
-        size_t n = output_predicted->num_neurons;
         float sum = 0.f;
-
-        for (size_t i = 0; i < n; i++) {
-                float diff = 0.f;
-                diff = output_expected->neurons[i].val -
-                       output_predicted->neurons[i].val;
+        for (size_t i = 0; i < num_classes; i++) {
+                float diff = expected_output[i] - predicted_output[i];
 
                 sum += diff * diff;
         }
+        sum /= num_classes;
 
-        return sum / n;
+        return sum;
 }
 
 /* returns multi-class labels */
