@@ -1,3 +1,4 @@
+#include "../Neural/neural.h"
 #include <stdio.h>
 #ifndef FILE_
 #define FILE_
@@ -5,10 +6,10 @@
 typedef struct {
         float **x_train;
         float **x_test;
-        char **y_train;
-        char **y_test;
+        int **y_train;
+        int **y_test;
         float **X;
-        char **Y;
+        int **Y;
         size_t samples;
         size_t train_samples;
         size_t test_samples;
@@ -18,9 +19,12 @@ typedef struct {
 
 dataset_handler *load_dataset(const char *);
 dataset_handler *train_test_split(dataset_handler *, float, size_t);
-size_t count_columns(char *);
-dataset_handler *shuffle_dataset(float **, char **, float, size_t, size_t,
+dataset_handler *shuffle_dataset(float **, int **, float, size_t, size_t,
                                  size_t);
+size_t count_columns(char *);
+int *one_hot_encoder(const char *);
+void train_network(neural_network *, dataset_handler *, const size_t);
 void gradient_descent(float *);
+void l2_regularization(int);
 
 #endif
