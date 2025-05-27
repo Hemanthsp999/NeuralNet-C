@@ -10,6 +10,7 @@ float assign_random_value(int threshold) {
         return (float)(rand() % (threshold + 1)) / threshold;
 }
 
+/* returns dot product */
 matrix *Multiplication(matrix mat1, matrix mat2) {
 
         if (mat1.cols != mat2.rows) {
@@ -19,8 +20,9 @@ matrix *Multiplication(matrix mat1, matrix mat2) {
                 assert(mat1.cols != mat2.rows);
         }
 
-        printf("Matrix 1 of Dimension: %ld\t Matrix 2 of Dimension: %ld\n",
-               mat1.rows, mat2.rows);
+        printf("Matrix 1 of Row: %ld\t Cols: %ld\t Matrix 2 of Row: %ld\t "
+               "Cols: %ld\n",
+               mat1.rows, mat1.cols, mat2.rows, mat2.cols);
 
         matrix *resultant = (matrix *)malloc(sizeof(matrix));
 
@@ -250,7 +252,8 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
 }
 
 /* return activated networks */
-neural_network *forward_pass(neural_network *network, float *input) {
+void forward_pass(neural_network *network, float *input) {
+
         if (!network) {
                 fprintf(stderr, "%s\n", "Network is empty?.");
                 free(network);
@@ -276,7 +279,7 @@ neural_network *forward_pass(neural_network *network, float *input) {
 
         // assign value to each neurons using weight and value of previous
         for (size_t i = 0; i < network->num_layers - 1; i++) {
-                printf("Processing the forward pass ...\n");
+                printf("Processing the forward pass: %ld ...\n", i + 1);
 
                 Layer *current_layer = &network->neural_layers[i];
                 Layer *next_layer = &network->neural_layers[i + 1];
@@ -371,7 +374,7 @@ neural_network *forward_pass(neural_network *network, float *input) {
             }
             */
 
-        return network;
+        // return network;
 }
 
 /* returns to previous and alter weights & bias based on percentage of error*/
