@@ -10,7 +10,8 @@ float tanh_derivative(float);
 float relu(float);
 float categorical_cross_entropy(Layer *, Layer *);
 float binary_cross_entropy(Layer *, Layer *);
-float mse(int*, int*, size_t);
+float mse(Layer *, float *);
 void soft_max(Layer *);
+void l2_regularization(neural_network* ,  float);
 
 #endif

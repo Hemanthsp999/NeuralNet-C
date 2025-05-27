@@ -17,16 +17,21 @@ float tanh_derivative(float x) { return 1.0 - powf(tan_h(x), 2); }
 
 float relu(float x) { return (x > 0) ? x : 0; }
 
-float mse(int *predicted_output, int *expected_output, size_t num_classes) {
+float mse(Layer *output_layer, float *output_expected) {
+        if (output_layer == NULL || output_expected == NULL) {
+                fprintf(stderr, "Error, The passed layer or output is empty\n");
+                assert(output_expected || output_layer);
+                return -1;
+        }
 
+        size_t num_classes = 3;
         float sum = 0.f;
         for (size_t i = 0; i < num_classes; i++) {
-                float diff = expected_output[i] - predicted_output[i];
-
-                sum += diff * diff;
+                float error = output_layer->neurons[i].val - output_expected[i];
+                sum += error * error;
         }
-        sum /= num_classes;
 
+        sum /= num_classes;
         return sum;
 }
 
@@ -116,4 +121,31 @@ void soft_max(Layer *output_layer_vals) {
                     expf(output_layer_vals->neurons[i].val - max_val) /
                     denominator;
         }
+}
+
+void l2_regularization(neural_network *processed_network,
+                       float lambda) {
+        if (processed_network == NULL) {
+                fprintf(stderr,
+                        "Error, The given network or output is empty.\n");
+                assert(processed_network);
+        }
+
+        printf("Lambda Value: %f\n", lambda);
+
+        float loss = 0.f;
+        for (size_t i = 0; i < processed_network->num_layers - 1; i++) {
+                Layer *curr_layer = &processed_network->neural_layers[i];
+                Layer *next_layer = &processed_network->neural_layers[i + 1];
+
+                for (size_t j = 0; j < curr_layer->num_neurons; j++) {
+                        for (size_t k = 0; k < next_layer->num_neurons; k++) {
+                                loss += curr_layer->neurons[j].val *
+                                        curr_layer->neurons[j].val;
+                        }
+                }
+        }
+
+        loss *= lambda / 2.f;
+        printf("L2 loss: %f\n", loss);
 }
