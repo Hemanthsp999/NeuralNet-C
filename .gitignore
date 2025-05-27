@@ -1,0 +1,4 @@
+main.o
+Activation/activation.o
+Neural/neural.o
+compile_commands.json
