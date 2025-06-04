@@ -54,7 +54,7 @@ int main() {
         printf("The test samples: %ld\n", split_data->test_samples);
         printf("The total samples: %ld\n", split_data->samples);
 
-        size_t input_values[] = {dataset->input_features, 4, 4, 3};
+        size_t input_values[] = {dataset->input_features, 5, 5, 3};
         size_t *layer_values = input_values;
 
         neural_network *construct_network =
@@ -77,7 +77,7 @@ int main() {
             }
             */
 
-        train_network(construct_network, split_data, 1000);
+        train_network(construct_network, split_data, 100);
 
         /*
             free_dataset(dataset);
