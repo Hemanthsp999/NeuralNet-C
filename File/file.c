@@ -1,4 +1,5 @@
 #include "file.h"
+#include "Activation/activation.h"
 #include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -341,34 +342,59 @@ void train_network(neural_network *network, dataset_handler *dataset,
                         }
 
                         // Forward pass
-                        neural_network *predicted_output =
-                            forward_pass(network, input_features);
+
+                        forward_pass(network, input_features);
 
                         // Calculate error for logging (mean squared error)
-                        float sample_error = 0.0f;
-                        for (size_t t = 0; t < num_classes; t++) {
-                                float err =
-                                    predicted_output
-                                        ->neural_layers[network->num_layers - 1]
-                                        .neurons[t]
-                                        .val -
-                                    (float)output_expected[t];
-                                sample_error += err * err;
-                        }
-                        sample_error /= num_classes;
-                        total_error += sample_error;
+                        /*
+                                    float sample_error = 0.0f;
+                                    for (size_t t = 0; t < num_classes; t++) {
+                                            float err =
+                                                predicted_output
+                                                    ->neural_layers[network->num_layers
+                           - 1] .neurons[t] .val - (float)output_expected[t];
+                                            sample_error += err * err;
+                                    }
+                                    sample_error /= num_classes;
+                        */
+
+                        float mse_error = mse(
+                            &network->neural_layers[network->num_layers - 1],
+                            (float *)output_expected);
+                        total_error += mse_error;
+
+                        l2_regularization(network, 0.3);
 
                         // Back propagation - pass the whole network and specify
                         // we want to update its last layer
                         back_propagation(
                             network, output_expected,
                             &network->neural_layers[network->num_layers - 1]);
+                        // display_network(predicted_output);
                 }
 
-                printf("------------> Average Error: %f\n", total_error);
+                printf("......................................................."
+                       "...................................\n");
+                printf("------------------------------> Average Error: %f "
+                       "<--------------------------------\n",
+                       total_error);
         }
 
         printf("Training completed!\n");
 }
 
+void display_network(neural_network *network) {
+        if (!network) {
+                fprintf(stderr, "Error\n");
+                assert(network);
+        }
 
+        printf("Displaying Neural Network\n");
+        for (size_t i = 0; i < network->num_layers - 1; i++) {
+                Layer *curr = &network->neural_layers[i];
+                for (size_t j = 0; j < curr->num_neurons; j++) {
+                        printf(" ( %f ) ", curr->neurons[j].val);
+                }
+                printf("\n");
+        }
+}

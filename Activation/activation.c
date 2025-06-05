@@ -95,6 +95,9 @@ void soft_max(Layer *output_layer_vals) {
                 assert(!output_layer_vals);
         }
 
+        printf("Number of Neurons Passed for softmax func: %ld\n",
+               output_layer_vals->num_neurons);
+
         /*
               softmax formula = e^zi - max(z) / sum(e^zj - max(z))
             */
@@ -120,11 +123,11 @@ void soft_max(Layer *output_layer_vals) {
                 output_layer_vals->neurons[i].val =
                     expf(output_layer_vals->neurons[i].val - max_val) /
                     denominator;
+                printf("Soft max value: %f\n", output_layer_vals->neurons[i].val);
         }
 }
 
-void l2_regularization(neural_network *processed_network,
-                       float lambda) {
+void l2_regularization(neural_network *processed_network, float lambda) {
         if (processed_network == NULL) {
                 fprintf(stderr,
                         "Error, The given network or output is empty.\n");
