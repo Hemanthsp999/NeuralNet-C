@@ -123,7 +123,8 @@ void soft_max(Layer *output_layer_vals) {
                 output_layer_vals->neurons[i].val =
                     expf(output_layer_vals->neurons[i].val - max_val) /
                     denominator;
-                printf("Soft max value: %f\n", output_layer_vals->neurons[i].val);
+                printf("Soft max value: %f\n",
+                       output_layer_vals->neurons[i].val);
         }
 }
 
@@ -152,3 +153,4 @@ void l2_regularization(neural_network *processed_network, float lambda) {
         loss *= lambda / 2.f;
         printf("L2 loss: %f\n", loss);
 }
+
