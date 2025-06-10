@@ -20,7 +20,11 @@ typedef struct {
 
 typedef struct {
         size_t num_neurons; // holds the number of neurons in the layer
-        Neuron *neurons;    // holds neuron val and weight
+        float *m_weights;
+        float *v_weights;
+        float *m_bias;
+        float *v_bias;
+        Neuron *neurons; // holds neuron val and weight
 } Layer;
 
 typedef struct {

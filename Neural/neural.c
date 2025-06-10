@@ -343,6 +343,8 @@ void forward_pass(neural_network *network, float *input) {
                         }
                         // pass sum with bias to sigmoid function
                         sum += next_layer->neurons[j].bias;
+
+                        // fill next layer neurons
                         next_layer->neurons[j].val = sigmoid(sum);
                         printf("\n");
 
@@ -359,22 +361,8 @@ void forward_pass(neural_network *network, float *input) {
                 }
         }
 
-        /*
-            for (size_t i = 0; i < network->num_layers; i++) {
-                    Layer *curr = &network->neural_layers[i];
-                    Layer *nxt = &network->neural_layers[i + 1];
-
-                    for (size_t n = 0; n < curr->num_neurons; n++) {
-                            for (size_t j = 0; j < nxt->num_neurons; j++) {
-                                    printf("Layer: %ld, Neuron[%ld]: value: %f",
-           i, n, curr->neurons[n].val);
-                            }
-                    }
-                    printf("\n");
-            }
-            */
-
-        // return network;
+        // pass values to softmax func()
+        soft_max(&network->neural_layers[network->num_layers - 1]);
 }
 
 /* returns to previous and alter weights & bias based on percentage of error*/
