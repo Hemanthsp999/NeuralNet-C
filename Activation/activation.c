@@ -2,6 +2,7 @@
 #include "activation.h"
 #include <assert.h>
 #include <math.h>
+#include <stdlib.h>
 
 /* returns sigmoid func (scales from 0 - 1)*/
 float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
@@ -154,3 +155,73 @@ void l2_regularization(neural_network *processed_network, float lambda) {
         printf("L2 loss: %f\n", loss);
 }
 
+/* returns moment and v of adam optimizer */
+void _init_adam_optimizer(Layer *layer) {
+        if (!layer) {
+                fprintf(stderr, "Error: The Network is corrupted.\n");
+                assert(layer);
+        }
+
+        layer->m_w = malloc(layer->num_neurons * sizeof(float *));
+        layer->v_w = malloc(layer->num_neurons * sizeof(float *));
+        layer->m_b = calloc(layer->num_neurons, sizeof(float));
+        layer->v_b = calloc(layer->num_neurons, sizeof(float));
+
+        for (size_t i = 0; i < layer->num_neurons; i++) {
+                layer->m_w[i] = calloc(layer->num_neurons, sizeof(float));
+                layer->v_w[i] = calloc(layer->num_neurons, sizeof(float));
+        }
+}
+
+void __adam_update(neural_network *layer, float learning_rate, int time_step) {
+        if (!layer) {
+                fprintf(stderr, "Error: There's some error in Layer.\n");
+                assert(layer);
+                return exit(EXIT_FAILURE);
+        }
+
+        printf("The Learning Rate for Optimizer: %f\t Time_Step: %d\n",
+               learning_rate, time_step);
+
+        const float beta1 = 0.9f;
+        const float beta2 = 0.999f;
+        const float epsilon = 1e-8f;
+
+        for (size_t i = 0; i < layer->num_layers; i++) {
+                Layer *curr_layer = &layer->neural_layers[i];
+                Layer *next_layer = &layer->neural_layers[i + 1];
+                for (size_t j = 0; j < curr_layer->num_neurons; j++) {
+                        for (size_t k = 0; k < next_layer->num_neurons; k++) {
+                                float weight_gradient =
+                                    get_weight_gradient(layer, i, j, k);
+
+                                // update momentum (first momentum)
+                                curr_layer->m_w[i][j] =
+                                    beta1 * curr_layer->m_w[i][j] +
+                                    (1.0f - beta1) * weight_gradient;
+
+                                // update velocity (second momentum)
+                                curr_layer->v_w[i][j] =
+                                    beta2 * curr_layer->v_w[i][j] +
+                                    (1.0f - beta2) * weight_gradient *
+                                        weight_gradient;
+
+                                float m_hat = curr_layer->m_w[i][j] /
+                                              (1.0f - powf(beta1, time_step));
+                                float v_hat = curr_layer->v_w[i][j] /
+                                              (1.0f - powf(beta2, time_step));
+
+                                // update weight
+                                curr_layer->neurons[j].weight[k] -=
+                                    learning_rate * m_hat /
+                                    (sqrtf(v_hat) + epsilon);
+                        }
+                }
+        }
+}
+
+float get_weight_gradient(neural_network *network, size_t layer_i,
+                          size_t neuron_j, size_t neuron_k) {
+        return network->neural_layers[layer_i].neurons[neuron_j].deltas *
+               network->neural_layers[layer_i + 1].neurons[neuron_k].val;
+}
