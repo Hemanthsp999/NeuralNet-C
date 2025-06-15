@@ -156,28 +156,82 @@ void l2_regularization(neural_network *processed_network, float lambda) {
 }
 
 /* returns moment and v of adam optimizer */
-void _init_adam_optimizer(Layer *layer) {
-        if (!layer) {
-                fprintf(stderr, "Error: The Network is corrupted.\n");
-                assert(layer);
+// Initialize Adam optimizer arrays
+void _init_adam_optimizer(neural_network *network) {
+        if (!network) {
+                fprintf(stderr,
+                        "Error: Network is NULL in init_adam_optimizer\n");
+                return;
         }
 
-        layer->m_w = malloc(layer->num_neurons * sizeof(float *));
-        layer->v_w = malloc(layer->num_neurons * sizeof(float *));
-        layer->m_b = calloc(layer->num_neurons, sizeof(float));
-        layer->v_b = calloc(layer->num_neurons, sizeof(float));
+        printf("Initializing Adam optimizer for %zu layers\n",
+               network->num_layers);
 
-        for (size_t i = 0; i < layer->num_neurons; i++) {
-                layer->m_w[i] = calloc(layer->num_neurons, sizeof(float));
-                layer->v_w[i] = calloc(layer->num_neurons, sizeof(float));
+        for (size_t i = 0; i < network->num_layers; i++) {
+                Layer *layer = &network->neural_layers[i];
+
+                // Initialize bias momentum arrays for all layers except input
+                // (if input has no trainable bias)
+                layer->m_b = (float *)calloc(layer->num_neurons, sizeof(float));
+                layer->v_b = (float *)calloc(layer->num_neurons, sizeof(float));
+
+                if (!layer->m_b || !layer->v_b) {
+                        fprintf(stderr,
+                                "Error: Failed to allocate bias momentum "
+                                "arrays for layer %zu\n",
+                                i);
+                        exit(EXIT_FAILURE);
+                }
+
+                // Initialize weight momentum arrays (not needed for output
+                // layer)
+                if (i < network->num_layers - 1) {
+                        size_t next_layer_size =
+                            network->neural_layers[i + 1].num_neurons;
+
+                        layer->m_w = (float **)malloc(layer->num_neurons *
+                                                      sizeof(float *));
+                        layer->v_w = (float **)malloc(layer->num_neurons *
+                                                      sizeof(float *));
+
+                        if (!layer->m_w || !layer->v_w) {
+                                fprintf(stderr,
+                                        "Error: Failed to allocate weight "
+                                        "momentum arrays for layer %zu\n",
+                                        i);
+                                exit(EXIT_FAILURE);
+                        }
+
+                        for (size_t j = 0; j < layer->num_neurons; j++) {
+                                layer->m_w[j] = (float *)calloc(next_layer_size,
+                                                                sizeof(float));
+                                layer->v_w[j] = (float *)calloc(next_layer_size,
+                                                                sizeof(float));
+
+                                if (!layer->m_w[j] || !layer->v_w[j]) {
+                                        fprintf(stderr,
+                                                "Error: Failed to allocate "
+                                                "momentum arrays for neuron "
+                                                "%zu in layer %zu\n",
+                                                j, i);
+                                        exit(EXIT_FAILURE);
+                                }
+                        }
+                } else {
+                        // Output layer doesn't need weight momentum arrays
+                        layer->m_w = NULL;
+                        layer->v_w = NULL;
+                }
         }
+
+        printf("Adam optimizer initialization completed\n");
 }
 
-void __adam_update(neural_network *layer, float learning_rate, int time_step) {
-        if (!layer) {
-                fprintf(stderr, "Error: There's some error in Layer.\n");
-                assert(layer);
-                return exit(EXIT_FAILURE);
+void __adam_update(neural_network *network, float learning_rate,
+                   int time_step) {
+        if (!network) {
+                fprintf(stderr, "Error: Network is NULL.\n");
+                exit(EXIT_FAILURE);
         }
 
         printf("The Learning Rate for Optimizer: %f\t Time_Step: %d\n",
@@ -187,41 +241,111 @@ void __adam_update(neural_network *layer, float learning_rate, int time_step) {
         const float beta2 = 0.999f;
         const float epsilon = 1e-8f;
 
-        for (size_t i = 0; i < layer->num_layers; i++) {
-                Layer *curr_layer = &layer->neural_layers[i];
-                Layer *next_layer = &layer->neural_layers[i + 1];
-                for (size_t j = 0; j < curr_layer->num_neurons; j++) {
+        // Update weights between layers
+        for (size_t i = 0; i < network->num_layers - 1; i++) {
+                Layer *current_layer = &network->neural_layers[i];
+                Layer *next_layer = &network->neural_layers[i + 1];
+                printf("Processing Epoch in adam_optimizer: %ld\n", i + 1);
+
+                // Check if momentum arrays are allocated
+                if (!current_layer->m_w || !current_layer->v_w) {
+                        fprintf(stderr,
+                                "Error: Momentum arrays not initialized for "
+                                "layer %zu\n",
+                                i);
+                        assert(current_layer->m_w || current_layer->v_w);
+                }
+
+                for (size_t j = 0; j < current_layer->num_neurons; j++) {
+                        // Check if weight array exists
+                        if (!current_layer->neurons[j].weight) {
+                                fprintf(stderr,
+                                        "Error: Weight array not allocated for "
+                                        "neuron %zu in layer %zu\n",
+                                        j, i);
+                                continue;
+                        }
+
+                        float curr_neuron_value = current_layer->neurons[j].val;
+                        // printf("current neuron value: %f\n",
+                        // curr_neuron_value);
+
                         for (size_t k = 0; k < next_layer->num_neurons; k++) {
+                                // Calculate weight gradient directly here
+                                // Gradient = input_activation * output_error
+                                float next_neuron_delta_value =
+                                    next_layer->neurons[k].deltas;
+
                                 float weight_gradient =
-                                    get_weight_gradient(layer, i, j, k);
+                                    curr_neuron_value * next_neuron_delta_value;
+                                // printf("DEBUG: %f\n", weight_gradient);
 
-                                // update momentum (first momentum)
-                                curr_layer->m_w[i][j] =
-                                    beta1 * curr_layer->m_w[i][j] +
+                                // Update first moment (momentum)
+                                current_layer->m_w[j][k] =
+                                    beta1 * current_layer->m_w[j][k] +
                                     (1.0f - beta1) * weight_gradient;
-
-                                // update velocity (second momentum)
-                                curr_layer->v_w[i][j] =
-                                    beta2 * curr_layer->v_w[i][j] +
+                                // Update second moment (velocity)
+                                current_layer->v_w[j][k] =
+                                    beta2 * current_layer->v_w[j][k] +
                                     (1.0f - beta2) * weight_gradient *
                                         weight_gradient;
 
-                                float m_hat = curr_layer->m_w[i][j] /
+                                // Bias correction
+                                float m_hat = current_layer->m_w[j][k] /
                                               (1.0f - powf(beta1, time_step));
-                                float v_hat = curr_layer->v_w[i][j] /
+                                float v_hat = current_layer->v_w[j][k] /
                                               (1.0f - powf(beta2, time_step));
 
-                                // update weight
-                                curr_layer->neurons[j].weight[k] -=
+                                // Update weight
+                                current_layer->neurons[j].weight[k] -=
                                     learning_rate * m_hat /
                                     (sqrtf(v_hat) + epsilon);
                         }
                 }
         }
+
+        // Update biases (skip input layer - layer 0)
+        for (size_t i = 1; i < network->num_layers; i++) {
+                Layer *layer = &network->neural_layers[i];
+
+                // Check if bias momentum arrays are allocated
+                if (!layer->m_b || !layer->v_b) {
+                        fprintf(stderr,
+                                "Error: Bias momentum arrays not initialized "
+                                "for layer %zu\n",
+                                i);
+                        continue;
+                }
+
+                for (size_t j = 0; j < layer->num_neurons; j++) {
+                        // Bias gradient is just the error delta
+                        float bias_gradient = layer->neurons[j].deltas;
+
+                        // Update first moment (momentum) for bias
+                        layer->m_b[j] = beta1 * layer->m_b[j] +
+                                        (1.0f - beta1) * bias_gradient;
+
+                        // Update second moment (velocity) for bias
+                        layer->v_b[j] =
+                            beta2 * layer->v_b[j] +
+                            (1.0f - beta2) * bias_gradient * bias_gradient;
+
+                        // Bias correction
+                        float m_hat_bias =
+                            layer->m_b[j] / (1.0f - powf(beta1, time_step));
+                        float v_hat_bias =
+                            layer->v_b[j] / (1.0f - powf(beta2, time_step));
+
+                        // Update bias
+                        layer->neurons[j].bias -= learning_rate * m_hat_bias /
+                                                  (sqrtf(v_hat_bias) + epsilon);
+                }
+        }
 }
 
+/* returns weight gradient difference of curr and next layer*/
 float get_weight_gradient(neural_network *network, size_t layer_i,
                           size_t neuron_j, size_t neuron_k) {
-        return network->neural_layers[layer_i].neurons[neuron_j].deltas *
-               network->neural_layers[layer_i + 1].neurons[neuron_k].val;
+        return (network->neural_layers[layer_i].neurons[neuron_j].deltas *
+                network->neural_layers[layer_i + 1].neurons[neuron_k].val);
 }
