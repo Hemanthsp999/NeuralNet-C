@@ -7,16 +7,16 @@
 /* returns sigmoid func (scales from 0 - 1)*/
 float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
 
-float sigmoid_derivative(float x) {
-        float s = sigmoid(x);
-        return s * (1 - s);
-}
-
 float tan_h(float x) { return tanhf(x); }
 
 float tanh_derivative(float x) { return 1.0 - powf(tan_h(x), 2); }
 
 float relu(float x) { return (x > 0) ? x : 0; }
+
+float sigmoid_derivative(float x) {
+        float s = sigmoid(x);
+        return s * (1 - s);
+}
 
 float mse(Layer *output_layer, float *output_expected) {
         if (output_layer == NULL || output_expected == NULL) {
@@ -155,9 +155,9 @@ void l2_regularization(neural_network *processed_network, float lambda) {
         printf("L2 loss: %f\n", loss);
 }
 
-/* returns moment and v of adam optimizer */
-// Initialize Adam optimizer arrays
+/* Initialize Adam optimizer arrays */
 void _init_adam_optimizer(neural_network *network) {
+        // Initialize Adam optimizer arrays
         if (!network) {
                 fprintf(stderr,
                         "Error: Network is NULL in init_adam_optimizer\n");
@@ -227,6 +227,7 @@ void _init_adam_optimizer(neural_network *network) {
         printf("Adam optimizer initialization completed\n");
 }
 
+/* returns moment and velocity of adam optimizer */
 void __adam_update(neural_network *network, float learning_rate,
                    int time_step) {
         if (!network) {
@@ -266,19 +267,12 @@ void __adam_update(neural_network *network, float learning_rate,
                                 continue;
                         }
 
-                        float curr_neuron_value = current_layer->neurons[j].val;
-                        // printf("current neuron value: %f\n",
-                        // curr_neuron_value);
-
                         for (size_t k = 0; k < next_layer->num_neurons; k++) {
                                 // Calculate weight gradient directly here
                                 // Gradient = input_activation * output_error
-                                float next_neuron_delta_value =
-                                    next_layer->neurons[k].deltas;
 
                                 float weight_gradient =
-                                    curr_neuron_value * next_neuron_delta_value;
-                                // printf("DEBUG: %f\n", weight_gradient);
+                                    get_weight_gradient(network, i, j, k);
 
                                 // Update first moment (momentum)
                                 current_layer->m_w[j][k] =
@@ -319,7 +313,7 @@ void __adam_update(neural_network *network, float learning_rate,
 
                 for (size_t j = 0; j < layer->num_neurons; j++) {
                         // Bias gradient is just the error delta
-                        float bias_gradient = layer->neurons[j].deltas;
+                        float bias_gradient = layer->neurons[j].delta;
 
                         // Update first moment (momentum) for bias
                         layer->m_b[j] = beta1 * layer->m_b[j] +
@@ -346,6 +340,6 @@ void __adam_update(neural_network *network, float learning_rate,
 /* returns weight gradient difference of curr and next layer*/
 float get_weight_gradient(neural_network *network, size_t layer_i,
                           size_t neuron_j, size_t neuron_k) {
-        return (network->neural_layers[layer_i].neurons[neuron_j].deltas *
-                network->neural_layers[layer_i + 1].neurons[neuron_k].val);
+        return (network->neural_layers[layer_i].neurons[neuron_j].val *
+                network->neural_layers[layer_i + 1].neurons[neuron_k].delta);
 }
