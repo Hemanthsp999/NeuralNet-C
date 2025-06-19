@@ -14,17 +14,18 @@ typedef struct {
 typedef struct {
         float val;
         float bias;
-        float deltas;
+        float delta;
         float *weight;
 } Neuron;
 
 typedef struct {
         size_t num_neurons; // holds the number of neurons in the layer
-        float *m_weights;
-        float *v_weights;
-        float *m_bias;
-        float *v_bias;
-        Neuron *neurons; // holds neuron val and weight
+        Neuron *neurons;    // holds neuron val and weight
+
+        float **m_w;
+        float *m_b;
+        float **v_w;
+        float *v_b;
 } Layer;
 
 typedef struct {
@@ -33,7 +34,7 @@ typedef struct {
                                      wise neurons and perform forwardpass */
 } neural_network;
 
-matrix *Multiplication(matrix, matrix);
+matrix *_Multiplication(matrix, matrix);
 matrix *Addition(matrix, matrix);
 matrix *Transpose(matrix);
 
