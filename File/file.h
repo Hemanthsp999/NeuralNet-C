@@ -26,7 +26,7 @@ int *one_hot_encoder(const char *);
 void train_network(neural_network *, dataset_handler *, const size_t);
 void gradient_descent(float *);
 void display_network(neural_network *);
-void _save_model_(dataset_handler*,neural_network *, const char *);
-void load_model(const char*);
+void _save_model_(neural_network *, const char *);
+neural_network* load_model(neural_network *, const char *);
 
 #endif

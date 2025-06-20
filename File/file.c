@@ -107,8 +107,9 @@ dataset_handler *load_dataset(const char *file_path) {
         printf("Total number of Columns: %d\n", total_columns);
         size_t input_features = total_columns - 1;
         printf("Input feature: %ld\n", input_features);
+
         int output_labels = 1;
-        printf("Output column: %d\n", output_labels);
+        printf("Output label: %d\n", output_labels);
         size_t samples = 1;
 
         while (fgets(line, sizeof(line), file)) {
@@ -317,12 +318,17 @@ void train_network(neural_network *network, dataset_handler *dataset,
         printf("Starting training with %ld epochs\n", epochs);
         size_t num_classes = 3;
 
+        _init_adam_optimizer(network);
+        float learning_rate = 0.05f;
+        int time_step = 0;
+
         for (size_t epoch = 0; epoch < epochs; epoch++) {
                 printf("\n=== Processing epoch: %ld/%ld ===\n", epoch + 1,
                        epochs);
                 float total_error = 0.0f;
 
                 for (size_t i = 0; i < dataset->train_samples; i++) {
+                        time_step++;
                         // Extract input features for this sample
                         float input_features[dataset->input_features];
                         for (size_t j = 0; j < dataset->input_features; j++) {
@@ -363,14 +369,14 @@ void train_network(neural_network *network, dataset_handler *dataset,
                             (float *)output_expected);
                         total_error += mse_error;
 
-                        l2_regularization(network, 0.3);
-
                         // Back propagation - pass the whole network and specify
                         // we want to update its last layer
                         back_propagation(
                             network, output_expected,
                             &network->neural_layers[network->num_layers - 1]);
+                        l2_regularization(network, 0.4f);
                         // display_network(predicted_output);
+                        __adam_update(network, learning_rate, time_step);
                 }
 
                 printf("......................................................."
@@ -381,6 +387,8 @@ void train_network(neural_network *network, dataset_handler *dataset,
         }
 
         printf("Training completed!\n");
+
+        _save_model_(network, "model_weights.txt");
 }
 
 void display_network(neural_network *network) {
@@ -397,4 +405,191 @@ void display_network(neural_network *network) {
                 }
                 printf("\n");
         }
+}
+
+void _save_model_(neural_network *network, const char *file_name) {
+
+        if (!network) {
+                fprintf(stderr, "Error: The network is not constructed.\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (!file_name) {
+                fprintf(stderr, "Please enter the file name\n");
+                assert(file_name);
+        }
+
+        FILE *file = fopen(file_name, "w");
+        if (!file) {
+                fprintf(stderr, "Error: could not open file\n");
+                return exit(EXIT_FAILURE);
+        }
+
+        int layer_size = network->num_layers;
+
+        fprintf(file, "Total Layers: %d\n", layer_size);
+        for (size_t i = 0; i < network->num_layers; i++) {
+                fprintf(file, "Layer[%ld]: %ld\n", i,
+                        network->neural_layers[i].num_neurons);
+        }
+
+        for (int i = 0; i < 60; i++) {
+                fprintf(file, "*");
+        }
+        fprintf(file, "\n");
+
+        size_t output_layer_neurons = network->num_layers;
+        size_t output_layer =
+            network->neural_layers[output_layer_neurons - 1].num_neurons;
+
+        for (int i = 0; i < layer_size - 1; i++) {
+
+                size_t num_neurons = network->neural_layers[i].num_neurons;
+                fprintf(file, "Layer: %d\n", i);
+                fprintf(file, "Number of Neurons: %ld\n", num_neurons);
+
+                Layer *curr_layer = &network->neural_layers[i];
+                Layer *next_layer = &network->neural_layers[i + 1];
+                for (size_t j = 0; j < curr_layer->num_neurons; j++) {
+                        fprintf(file, "Neuron[%zu]\t", j);
+                        if (i != 0) {
+                                fprintf(file, "Bias: %f\tDelta: %f\n",
+                                        curr_layer->neurons[j].bias,
+                                        curr_layer->neurons[j].delta);
+                        }
+                        for (size_t k = 0; k < next_layer->num_neurons; k++) {
+                                fprintf(file, "\t\tweight[%ld][%ld]: %f\n", j,
+                                        k, curr_layer->neurons[j].weight[k]);
+                        }
+                }
+
+                for (int k = 0; k < 60; k++) {
+                        fprintf(file, "*");
+                }
+                fprintf(file, "\n");
+        }
+        fprintf(file, "Layer: %ld\n", output_layer_neurons - 1);
+        fprintf(file, "Number of Neurons: %ld\n", output_layer);
+
+        for (size_t b = 0; b < output_layer; ++b) {
+                fprintf(file, "Neuron[%zu]\tBias: %f\tDelta: %f\n", b,
+                        network->neural_layers[output_layer_neurons - 1]
+                            .neurons[b]
+                            .bias,
+                        network->neural_layers[output_layer_neurons - 1]
+                            .neurons[b]
+                            .delta);
+        }
+
+        fclose(file);
+        printf("Model saved successfully to %s\n", file_name);
+}
+
+/* returns original network weights and biases */
+neural_network *load_model(neural_network *network, const char *file_name) {
+
+        if (!network) {
+                fprintf(stderr, "Error: There's some error in network.\n");
+                exit(EXIT_FAILURE);
+        }
+
+        if (!file_name) {
+                fprintf(stderr,
+                        "There is No model_file in that name %s. Please check "
+                        "once !.\n",
+                        file_name);
+                exit(EXIT_FAILURE);
+        }
+
+        FILE *file = fopen(file_name, "r");
+        if (!file) {
+                fprintf(stderr, "Error while opening the file\n");
+                exit(EXIT_FAILURE);
+        }
+
+        size_t get_total_layers;
+        fscanf(file, "Total Layers: %ld\n", &get_total_layers);
+
+        if (get_total_layers != network->num_layers) {
+                fprintf(stderr,
+                        "Mismatch: The Retrieved Layer %ld from model_weight "
+                        "file is not matching with Layer %ld in the Network \n",
+                        get_total_layers, network->num_layers);
+                fclose(file);
+                exit(EXIT_FAILURE);
+        }
+
+        size_t *each_layer_neurons = calloc(
+            get_total_layers, sizeof(size_t)); // store each layer's neurons
+        if (!each_layer_neurons) {
+                fprintf(stderr, "Error: Memory is not allocated correctly.\n");
+                assert(each_layer_neurons);
+        }
+
+        size_t layer_index;
+        for (size_t i = 0; i < get_total_layers; i++) {
+                fscanf(file, "Layer[%zu]: %zu\n", &layer_index,
+                       &each_layer_neurons[layer_index]);
+        }
+
+        for (size_t l = 0; l < get_total_layers; l++) {
+                char buffer[256];
+                size_t num_neurons = 0;
+
+                size_t neurons_in_layer_ =
+                    network->neural_layers[l].num_neurons;
+
+                fgets(buffer, sizeof(buffer),
+                      file); // skip Header "********************"
+                fgets(buffer, sizeof(buffer), file); // skip "Layer"
+
+                fscanf(file, "Number of Neurons: %zu\n", &num_neurons);
+
+                if (num_neurons != neurons_in_layer_) {
+                        fprintf(stderr,
+                                "Mismatch: Retrieved Layer[%zu] has %zu "
+                                "Neurons while "
+                                "Layer[%zu] has %zu Neurons\n",
+                                l, num_neurons, l, neurons_in_layer_);
+                }
+
+                for (size_t j = 0; j < each_layer_neurons[l]; j++) {
+
+                        if (l < get_total_layers - 1) {
+
+                                for (size_t k = 0;
+                                     k < each_layer_neurons[l + 1]; k++) {
+                                        fscanf(file, "weight[%zu][%zu]: %f\n",
+                                               &j, &k,
+                                               &network->neural_layers[l]
+                                                    .neurons[j]
+                                                    .weight[k]);
+                                }
+                        }
+                }
+        }
+
+        for (size_t i = 1; i < get_total_layers; i++) {
+                char buffer[256];
+                size_t neurons = each_layer_neurons[i];
+                float bias = 0.f;
+                float delta = 0.f;
+                size_t index = 0;
+
+                fgets(buffer, sizeof(buffer), file);
+                fgets(buffer, sizeof(buffer), file);
+                for (size_t j = 0; j < neurons; j++) {
+                        fscanf(file, "Neuron[%zu]\tBias: %f\tDelta: %f\n",
+                               &index, &bias, &delta);
+                        if (bias != network->neural_layers[i].neurons[j].bias) {
+                                fprintf(stderr, "Error Bias is mismatching\n");
+                                return EXIT_FAILURE;
+                        }
+                }
+        }
+
+        fclose(file);
+        printf("Model Successfully loaded.\n");
+
+        return network;
 }
