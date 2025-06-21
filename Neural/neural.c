@@ -199,9 +199,10 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
                 for (size_t n = 0; n < layer_size[i]; n++) {
                         network->neural_layers[i].neurons[n].val = 0.f;
 
-                        // add bias per each neuron
+                        /* add bias per each neuron
                         network->neural_layers[i].neurons[n].bias =
                             assign_random_value(threshold);
+            */
 
                         if (i < num_layers - 1) {
                                 /* Initialize weights to zero */
@@ -227,6 +228,15 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
                                 network->neural_layers[i].neurons[n].weight =
                                     NULL;
                         }
+                }
+        }
+
+        /* Extrad Added */
+        for (size_t i = 1; i < num_layers; i++) {
+                Layer *curr_layer = &network->neural_layers[i];
+                for (size_t j = 0; j < curr_layer->num_neurons; j++) {
+                        curr_layer->neurons[j].bias =
+                            assign_random_value(threshold);
                 }
         }
 
@@ -408,7 +418,7 @@ void back_propagation(neural_network *network, int *output_expected,
         }
 
         // Backpropagate delta
-        for (int l = output_idx - 1; l >= 0; l--) {
+        for (int l = output_idx - 1; l > 0; l--) {
                 Layer *current_layer = &network->neural_layers[l];
                 Layer *next_layers = &network->neural_layers[l + 1];
 
