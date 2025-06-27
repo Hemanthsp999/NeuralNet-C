@@ -98,6 +98,7 @@ dataset_handler *load_dataset(const char *file_path) {
         printf("The size of the dataset: %lu\n", file_size);
 
         fseek(file, 0, SEEK_SET);
+
         char line[MAX_LENGTH];
         printf("Line value: %d\n", *line);
 
@@ -112,6 +113,7 @@ dataset_handler *load_dataset(const char *file_path) {
         printf("Output label: %d\n", output_labels);
         size_t samples = 1;
 
+        // count total size of data inside dataset
         while (fgets(line, sizeof(line), file)) {
                 samples++;
         }
@@ -304,7 +306,7 @@ dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
         return new_data;
 }
 
-void train_network(neural_network *network, dataset_handler *dataset,
+void _train_network(neural_network *network, dataset_handler *dataset,
                    const size_t epochs) {
         if (!network || !dataset) {
                 fprintf(stderr,
@@ -583,7 +585,7 @@ neural_network *load_model(neural_network *network, const char *file_name) {
                                &index, &bias, &delta);
                         if (bias != network->neural_layers[i].neurons[j].bias) {
                                 fprintf(stderr, "Error Bias is mismatching\n");
-                                return EXIT_FAILURE;
+                                exit(EXIT_FAILURE);
                         }
                 }
         }
