@@ -17,7 +17,7 @@ matrix *_Multiplication(matrix mat1, matrix mat2) {
                 fprintf(stderr, "%s\n",
                         "Col of first matrix is not equal to rows of second "
                         "matrix");
-                assert(mat1.cols != mat2.rows);
+                exit(EXIT_FAILURE);
         }
 
         printf("Matrix 1 of Row: %ld\t Cols: %ld\t Matrix 2 of Row: %ld\t "
@@ -62,7 +62,7 @@ matrix *_Multiplication(matrix mat1, matrix mat2) {
         return resultant;
 }
 
-matrix *Addition(matrix mat1, matrix mat2) {
+matrix *_Addition(matrix mat1, matrix mat2) {
         if (mat1.rows != mat2.rows || mat1.cols != mat2.cols) {
                 fprintf(
                     stderr, "%s\n",
@@ -101,7 +101,7 @@ matrix *Addition(matrix mat1, matrix mat2) {
 }
 
 /* returns transpose of a matrix i.e [1 2] -> [2 1] */
-matrix *Transpose(matrix mat1) {
+matrix *_Transpose(matrix mat1) {
         if (!mat1.rows || !mat1.cols) {
                 fprintf(stderr, "%s\n",
                         "The size of Row or cols of given matrix is Zero\n");
@@ -176,7 +176,8 @@ neural_network *Feed_Forward_Network(size_t *layer_size, size_t num_layers) {
         printf("Number of layers present in Neural Network: %ld\n", num_layers);
 
         for (size_t i = 0; i < num_layers; i++) {
-                printf("Input present in Layer[%ld]: %ld\n", i, layer_size[i]);
+                printf("Number of Neurons present in Layer[%ld]: %ld\n", i,
+                       layer_size[i]);
         }
 
         for (size_t i = 0; i < num_layers; i++) {

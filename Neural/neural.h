@@ -35,8 +35,8 @@ typedef struct {
 } neural_network;
 
 matrix *_Multiplication(matrix, matrix);
-matrix *Addition(matrix, matrix);
-matrix *Transpose(matrix);
+matrix *_Addition(matrix, matrix);
+matrix *_Transpose(matrix);
 
 neural_network *Feed_Forward_Network(size_t *, size_t);
 void back_propagation(neural_network *, int *, Layer *);
