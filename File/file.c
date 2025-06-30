@@ -1,6 +1,7 @@
 #include "file.h"
 #include "Activation/activation.h"
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -19,8 +20,13 @@ size_t count_columns(char *line) {
         return count;
 }
 
+const int num_classes = 3;
+
 int *one_hot_encoder(const char *string) {
-        int num_classes = 3;
+        if (!string) {
+                fprintf(stderr, "Please enter a valid string: %s\n", string);
+                exit(EXIT_FAILURE);
+        }
 
         int *encoder = (int *)malloc(num_classes * sizeof(int));
         if (!encoder) {
@@ -307,7 +313,7 @@ dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
 }
 
 void _train_network(neural_network *network, dataset_handler *dataset,
-                   const size_t epochs) {
+                    const size_t epochs) {
         if (!network || !dataset) {
                 fprintf(stderr,
                         "The network is empty or the dataset is NULL.\n");
@@ -495,7 +501,7 @@ neural_network *load_model(neural_network *network, const char *file_name) {
                 exit(EXIT_FAILURE);
         }
 
-        if (!file_name) {
+        if (strcmp(file_name, "") == 0) {
                 fprintf(stderr,
                         "There is No model_file in that name %s. Please check "
                         "once !.\n",
@@ -509,89 +515,37 @@ neural_network *load_model(neural_network *network, const char *file_name) {
                 exit(EXIT_FAILURE);
         }
 
-        size_t get_total_layers;
-        fscanf(file, "Total Layers: %ld\n", &get_total_layers);
+        size_t total_layers_;
+        fscanf(file, "Total Layers: %zu", &total_layers_);
 
-        if (get_total_layers != network->num_layers) {
-                fprintf(stderr,
-                        "Mismatch: The Retrieved Layer %ld from model_weight "
-                        "file is not matching with Layer %ld in the Network \n",
-                        get_total_layers, network->num_layers);
-                fclose(file);
-                exit(EXIT_FAILURE);
-        }
+        static char buffer[1024];
 
-        size_t *each_layer_neurons = calloc(
-            get_total_layers, sizeof(size_t)); // store each layer's neurons
-        if (!each_layer_neurons) {
-                fprintf(stderr, "Error: Memory is not allocated correctly.\n");
-                assert(each_layer_neurons);
-        }
+        size_t *each_layer_neurons = calloc(total_layers_, sizeof(size_t));
 
-        size_t layer_index;
-        for (size_t i = 0; i < get_total_layers; i++) {
-                fscanf(file, "Layer[%zu]: %zu\n", &layer_index,
-                       &each_layer_neurons[layer_index]);
-        }
-
-        for (size_t l = 0; l < get_total_layers; l++) {
-                char buffer[256];
-                size_t num_neurons = 0;
-
-                size_t neurons_in_layer_ =
-                    network->neural_layers[l].num_neurons;
-
-                fgets(buffer, sizeof(buffer),
-                      file); // skip Header "********************"
-                fgets(buffer, sizeof(buffer), file); // skip "Layer"
-
-                fscanf(file, "Number of Neurons: %zu\n", &num_neurons);
-
-                if (num_neurons != neurons_in_layer_) {
-                        fprintf(stderr,
-                                "Mismatch: Retrieved Layer[%zu] has %zu "
-                                "Neurons while "
-                                "Layer[%zu] has %zu Neurons\n",
-                                l, num_neurons, l, neurons_in_layer_);
-                }
-
-                for (size_t j = 0; j < each_layer_neurons[l]; j++) {
-
-                        if (l < get_total_layers - 1) {
-
-                                for (size_t k = 0;
-                                     k < each_layer_neurons[l + 1]; k++) {
-                                        fscanf(file, "weight[%zu][%zu]: %f\n",
-                                               &j, &k,
-                                               &network->neural_layers[l]
-                                                    .neurons[j]
-                                                    .weight[k]);
-                                }
-                        }
-                }
-        }
-
-        for (size_t i = 1; i < get_total_layers; i++) {
-                char buffer[256];
-                size_t neurons = each_layer_neurons[i];
-                float bias = 0.f;
-                float delta = 0.f;
-                size_t index = 0;
-
+        for (size_t i = 0; i < total_layers_; ++i) {
+                size_t index;
                 fgets(buffer, sizeof(buffer), file);
-                fgets(buffer, sizeof(buffer), file);
-                for (size_t j = 0; j < neurons; j++) {
-                        fscanf(file, "Neuron[%zu]\tBias: %f\tDelta: %f\n",
-                               &index, &bias, &delta);
-                        if (bias != network->neural_layers[i].neurons[j].bias) {
-                                fprintf(stderr, "Error Bias is mismatching\n");
-                                exit(EXIT_FAILURE);
-                        }
-                }
+                fscanf(file, "Layer[%zu]: %zu", &index, &each_layer_neurons[i]);
         }
 
-        fclose(file);
-        printf("Model Successfully loaded.\n");
+        long position = -1;
+        while (fgets(buffer, sizeof(buffer), file)) {
+                if (strcmp(buffer, "Layer: 1"))
+                        break;
+                position = ftell(file);
+        }
 
+    position -= strlen(buffer);
+
+        fseek(file, position+4, SEEK_SET);
+
+        printf("Current Cursor: %s\n", buffer);
+
+        printf("Debug: total_layers: %zu\n", total_layers_);
+        for (size_t i = 0; i < total_layers_; i++) {
+                printf("Layers[%zu]: %zu\n", i, each_layer_neurons[i]);
+        }
+
+        free(each_layer_neurons);
         return network;
 }
