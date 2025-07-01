@@ -382,7 +382,7 @@ void back_propagation(neural_network *network, int *output_expected,
         if (!network) {
                 fprintf(stderr, "the network is empyt.\n");
                 free(network);
-                assert(!network);
+                assert(network);
         }
 
         if (!output_expected) {
@@ -396,30 +396,34 @@ void back_propagation(neural_network *network, int *output_expected,
                 free(output_predicted);
                 assert(!output_predicted);
         }
-        printf("Now the function is in Back_Propagation\n");
+
+        printf("Debug: Now the function is in Back_Propagation\n");
 
         // number of layers that network contains
         size_t n_layers = network->num_layers;
 
         // points to last layer
-        size_t output_idx = n_layers - 1;
+        size_t output_layer = n_layers - 1;
+        size_t output_layer_neurons =
+            network->neural_layers[output_layer].num_neurons;
 
         // calculate delta value for output layer
-        for (size_t i = 0; i < network->neural_layers[output_idx].num_neurons;
-             i++) {
+        Layer *outputLayer = &network->neural_layers[output_layer];
+        for (size_t i = 0; i < output_layer_neurons; i++) {
                 float a = output_predicted->neurons[i].val;
                 float y = (float)output_expected[i];
                 float z_derivative = sigmoid_derivative(a);
 
-                network->neural_layers[output_idx].neurons[i].delta =
-                    (a - y) * z_derivative;
+                float delta_value = (a - y) * z_derivative;
+
+                outputLayer->neurons[i].delta = delta_value;
 
                 printf("Output neuron %zu: value=%f, expected=%f, delta=%f\n",
                        i, a, y, output_predicted->neurons[i].delta);
         }
 
         // Backpropagate delta
-        for (int l = output_idx - 1; l > 0; l--) {
+        for (int l = output_layer - 1; l > 0; --l) {
                 Layer *current_layer = &network->neural_layers[l];
                 Layer *next_layers = &network->neural_layers[l + 1];
 
@@ -431,30 +435,38 @@ void back_propagation(neural_network *network, int *output_expected,
                                     current_layer->neurons[i].weight[j];
                         }
 
+                        float curr_neuron_val = current_layer->neurons[i].val;
                         float z_derivative =
-                            sigmoid_derivative(current_layer->neurons[i].val);
+                            sigmoid_derivative(curr_neuron_val);
 
                         current_layer->neurons[i].delta =
                             error_sum * z_derivative;
                 }
         }
 
-        float learning_rate = 0.005f;
+        float learning_rate = 0.001f;
 
         // update weight
-        for (size_t l = 0; l < n_layers - 1; l++) {
-                Layer *curr = &network->neural_layers[l];
-                Layer *nxt_layers = &network->neural_layers[l + 1];
+        for (size_t l = 0; l < output_layer; l++) {
+                Layer *current_layer = &network->neural_layers[l];
+                Layer *next_layer = &network->neural_layers[l + 1];
 
-                for (size_t i = 0; i < nxt_layers->num_neurons; i++) {
-                        for (size_t n = 0; n < curr->num_neurons; n++) {
+                for (size_t i = 0; i < next_layer->num_neurons; i++) {
+                        for (size_t n = 0; n < current_layer->num_neurons;
+                             n++) {
                                 /* Update weights: weight -= learning_rate *
                                  * input_activation * delta
                                  */
 
-                                curr->neurons[n].weight[i] -=
-                                    learning_rate * curr->neurons[n].val *
-                                    nxt_layers->neurons[i].delta;
+                                float current_neuron_value =
+                                    current_layer->neurons[n].val;
+
+                                float next_layer_delta =
+                                    next_layer->neurons[i].delta;
+
+                                current_layer->neurons[n].weight[i] -=
+                                    learning_rate * current_neuron_value *
+                                    next_layer_delta;
                         }
                 }
         }
@@ -469,6 +481,7 @@ void back_propagation(neural_network *network, int *output_expected,
                 /* formula to update bias: new_bias =
                  * old_bias * lr * delta */
                 for (size_t i = 0; i < curr_layer->num_neurons; i++) {
+
                         curr_layer->neurons[i].bias -=
                             learning_rate * curr_layer->neurons[i].delta;
                 }
