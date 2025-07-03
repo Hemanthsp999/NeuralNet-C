@@ -7,16 +7,16 @@
 /* returns sigmoid func (scales from 0 - 1)*/
 float sigmoid(float x) { return 1.0f / (1.0f + exp(-x)); }
 
+float sigmoid_derivative(float x) {
+        float s = sigmoid(x);
+        return s * (1 - s);
+}
+
 float tan_h(float x) { return tanhf(x); }
 
 float tanh_derivative(float x) { return 1.0 - powf(tan_h(x), 2); }
 
 float relu(float x) { return (x > 0) ? x : 0; }
-
-float sigmoid_derivative(float x) {
-        float s = sigmoid(x);
-        return s * (1 - s);
-}
 
 float mse(Layer *output_layer, float *output_expected) {
         if (output_layer == NULL || output_expected == NULL) {
