@@ -23,7 +23,7 @@ dataset_handler *shuffle_dataset(float **, int **, float, size_t, size_t,
                                  size_t);
 size_t count_columns(char *);
 int *one_hot_encoder(const char *);
-void train_network(neural_network *, dataset_handler *, const size_t);
+void _train_network(neural_network *, dataset_handler *, const size_t);
 void gradient_descent(float *);
 void display_network(neural_network *);
 void _save_model_(neural_network *, const char *);
