@@ -1,7 +1,6 @@
 #include "file.h"
 #include "Activation/activation.h"
 #include <assert.h>
-#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -501,10 +500,10 @@ neural_network *load_model(neural_network *network, const char *file_name) {
                 exit(EXIT_FAILURE);
         }
 
-        if (strcmp(file_name, "") == 0) {
+        if (!strcmp(file_name, " ") || !strcmp(file_name, "")) {
                 fprintf(stderr,
                         "There is No model_file in that name %s. Please check "
-                        "once !.\n",
+                        "once !. \n",
                         file_name);
                 exit(EXIT_FAILURE);
         }
@@ -518,33 +517,140 @@ neural_network *load_model(neural_network *network, const char *file_name) {
         size_t total_layers_;
         fscanf(file, "Total Layers: %zu", &total_layers_);
 
-        static char buffer[1024];
+        static char buffer[512];
 
         size_t *each_layer_neurons = calloc(total_layers_, sizeof(size_t));
 
+        /* Extract each layer neurons */
         for (size_t i = 0; i < total_layers_; ++i) {
-                size_t index;
+                size_t index = 0;
                 fgets(buffer, sizeof(buffer), file);
                 fscanf(file, "Layer[%zu]: %zu", &index, &each_layer_neurons[i]);
         }
 
-        long position = -1;
+        float **bias_ = malloc(total_layers_ * sizeof(float *));
+        if (!bias_) {
+                fprintf(stderr, "Error: Memory is not allocated for Bias "
+                                "'Load_Model();'\n");
+                assert(bias_);
+        }
+
+        float ***weight_ = malloc(total_layers_ * sizeof(float **));
+        if (!weight_) {
+                fprintf(stderr, "Error: Memroy is not allocated for weight "
+                                "matrix 'Load_Model();'");
+                assert(weight_);
+        }
+
+        for (size_t j = 0; j < total_layers_; j++) {
+                bias_[j] = calloc(each_layer_neurons[j], sizeof(float));
+        }
+
+        for (size_t l = 0; l < total_layers_ - 1; l++) {
+                weight_[l] = malloc(each_layer_neurons[l] * sizeof(float *));
+                for (size_t j = 0; j < each_layer_neurons[l]; j++) {
+                        weight_[l][j] =
+                            calloc(each_layer_neurons[l + 1], sizeof(float));
+                }
+        }
+
+        // extract bias and delta values from layer 1 to n - 1.
+        // track layer individually
+        size_t layer = 1;
+        size_t neuron = 0;
+
+        size_t l = 0;
+        size_t curr_neuron = 0;
+        size_t next_neuron = 0;
         while (fgets(buffer, sizeof(buffer), file)) {
-                if (strcmp(buffer, "Layer: 1"))
-                        break;
-                position = ftell(file);
+
+                (neuron == each_layer_neurons[layer] && layer < total_layers_)
+                    ? layer++,
+                    neuron = 0 : neuron;
+
+                if (l < total_layers_ - 1 &&
+                    next_neuron == each_layer_neurons[l + 1]) {
+                        curr_neuron++;
+                        next_neuron = 0;
+
+                        if (curr_neuron == each_layer_neurons[l]) {
+                                l++;
+                                curr_neuron = 0;
+                        }
+                }
+
+                float temp_bias = 0.f;
+
+                if (strstr(buffer, "Bias:") != NULL) {
+                        char *bias_val = strchr(buffer, ':');
+                        if (bias_val != NULL) {
+                                temp_bias = atof(bias_val + 1);
+                                bias_[layer][neuron] = temp_bias;
+                                neuron++;
+                        }
+                }
+
+                if (strstr(buffer, "weight") != NULL) {
+                        char *trim_weight = strchr(buffer, ':');
+                        if (trim_weight != NULL) {
+                                float val = atof(trim_weight + 1);
+                                weight_[l][curr_neuron][next_neuron] = val;
+                        }
+                        next_neuron++;
+                }
         }
 
-    position -= strlen(buffer);
+        printf("\n**************>Debug Bias values: \n");
+        for (size_t i = 1; i < total_layers_; i++) {
+                for (size_t j = 0; j < each_layer_neurons[i]; j++) {
+                        network->neural_layers[i].neurons[j].bias = bias_[i][j];
+                        float debug_bias =
+                            network->neural_layers[i].neurons[j].bias;
+                        printf("[%zu Layer][%zu Neuron]: %f\n", i, j,
+                               debug_bias);
+                }
+                printf("\n");
+        }
 
-        fseek(file, position+4, SEEK_SET);
+        printf("\n**************>Debug Weights: \n");
+        for (size_t i = 0; i < total_layers_ - 1; i++) {
+                Layer *CurrLayer = &network->neural_layers[i];
+                for (size_t j = 0; j < each_layer_neurons[i]; j++) {
+                        for (size_t k = 0; k < each_layer_neurons[i + 1]; k++) {
+                                printf("Original Weights[%zu][%zu][%zu]: %f | ",
+                                       i, j, k,
+                                       CurrLayer->neurons[j].weight[k]);
+                                CurrLayer->neurons[j].weight[k] =
+                                    weight_[i][j][k];
+                                printf("Weights[%zu Layer][%zu][%zu]: %f\n", i,
+                                       j, k, CurrLayer->neurons[j].weight[k]);
+                        }
+                }
+                printf("\n");
+        }
 
-        printf("Current Cursor: %s\n", buffer);
-
-        printf("Debug: total_layers: %zu\n", total_layers_);
+        printf("**************>Debug Total Layers: %zu\n", total_layers_);
         for (size_t i = 0; i < total_layers_; i++) {
-                printf("Layers[%zu]: %zu\n", i, each_layer_neurons[i]);
+                printf("Number of Neurons present in [%zu]th Layer: %zu\n", i,
+                       each_layer_neurons[i]);
         }
+
+        fclose(file);
+
+        /* Release memory */
+        for (size_t l = 0; l < total_layers_ - 1; l++) {
+                for (size_t j = 0; j < each_layer_neurons[l]; j++) {
+                        free(weight_[l][j]);
+                        weight_[l][j] = NULL;
+                }
+        }
+        free(weight_);
+
+        for (size_t j = 0; j < total_layers_; j++) {
+                free(bias_[j]);
+                bias_[j] = NULL;
+        }
+        free(bias_);
 
         free(each_layer_neurons);
         return network;
