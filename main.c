@@ -2,98 +2,85 @@
 #include "File/memory.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
-int main() {
-        printf("Neural Network Library in C, still work in progress\n");
+int main(int argc, char *argv[]) {
 
-        /* load dataset */
-        const char *file_name = "iris.csv";
-        dataset_handler *dataset = load_dataset(file_name);
-
-        for (size_t i = 0; i < dataset->samples; i++) {
-                printf("Sample %ld: ", i + 1);
-                for (size_t j = 0; j < dataset->input_features; j++) {
-                        printf("%f ", dataset->X[i][j]);
-                }
-                for (size_t k = 0; k < 3; k++) {
-                        printf("%d ", dataset->Y[i][k]);
-                }
-
-                printf("\n");
+        if (argc < 1) {
+                printf("Usage: %s -dataset <name> <test-size> [-train "
+                       "'epochs'|-predict]\n",
+                       argv[0]);
+                return 1;
         }
 
-        float test_size = 0.2f;
-        size_t random_state = 42;
-        dataset_handler *split_data =
-            train_test_split(dataset, test_size, random_state);
+        char *Dataset = NULL;
+        _Bool load_dataset_;
+        float test_size;
 
-        printf("The Train samples\n");
-        for (size_t i = 0; i < split_data->train_samples; i++) {
-                printf("Train samples: %ld  ", i + 1);
-                for (size_t j = 0; j < split_data->input_features; j++) {
-                        printf("%f ", split_data->x_train[i][j]);
+        _Bool do_train, do_validate, do_predict;
+        size_t epochs = 0;
+
+        for (int i = 1; i < argc; i++) {
+                if (strcmp(argv[i], "-dataset") == 0 && i + 1 < argc) {
+                        Dataset = argv[++i];
+                        test_size = atof(argv[++i]);
+                        (Dataset) ? load_dataset_ = 1 : load_dataset_;
                 }
-                for (int k = 0; k < 3; k++) {
-                        printf("%d ", split_data->y_train[i][k]);
+
+                if (strcmp(argv[i], "-train") == 0 && i + 1 < argc) {
+                        epochs = atoi(argv[++i]);
+                        printf("Number of epochs: %zu\n", epochs);
+                        do_train = 1;
+
+                } else if (strcmp(argv[i], "-predict") == 0) {
+                        do_predict = 1;
+                } else if (strcmp(argv[i], "-val") == 0) {
+                        do_validate = 1;
                 }
-                printf("\n");
+
+                if (strcmp(argv[i], "-help") == 0) {
+                        printf("Usage:\n");
+                        printf("  -dataset <file> <test-size> Dataset filename "
+                               "(CSV). (test-size -> 0.3)\n");
+                        printf("  -train            Train the model\n");
+                        printf("  -val            Validate the model\n");
+                        printf(
+                            "  -predict          Predict using saved model\n");
+                        return 0;
+                }
         }
 
-        printf("These are the Testing samples\n");
-        for (size_t i = 0; i < split_data->test_samples; i++) {
-                printf("Test samples: %ld ", i + 1);
-                for (size_t j = 0; j < split_data->input_features; j++) {
-                        printf("%f ", split_data->x_test[i][j]);
-                }
-                for (int k = 0; k < 3; k++) {
-                        printf("%d ", split_data->y_test[i][k]);
-                }
-                printf("\n");
+        if (!load_dataset_)
+                return fprintf(stderr, "Enter the Dataset.\n");
+
+        if (!test_size) {
+                return fprintf(stderr,
+                               "Please enter a valid Train/Test size ratio\n");
         }
-        printf("The train samples: %ld\n", split_data->train_samples);
-        printf("The test samples: %ld\n", split_data->test_samples);
-        printf("The total samples: %ld\n", split_data->samples);
 
-        size_t input_values[] = {dataset->input_features, 5, 5, 3};
-        size_t *layer_values = input_values;
+        dataset_handler *load_data = load_dataset(Dataset);
 
-        neural_network *construct_network =
-            Feed_Forward_Network(layer_values, 4);
+        load_data = train_test_split(load_data, test_size, 42);
 
-        /*
-            for (size_t i = 0; i < construct_network->num_layers - 1; i++) {
-                    Layer *curr = &construct_network->neural_layers[i];
-                    Layer *nxt = &construct_network->neural_layers[i + 1];
+        size_t in_hi_ou_neurons[] = {load_data->input_features, 10, 10, 10, 3};
+        size_t *in_hi_ou_layers = in_hi_ou_neurons;
 
-                    printf("Debug Log\n");
-                    for (size_t n = 0; n < curr->num_neurons; n++) {
-                            for (size_t j = 0; j < nxt->num_neurons; j++) {
-                                    printf("Layer[%ld] Neuron: %ld, Bias[%ld]:
-           %f " "Weight[%ld][%ld]: %f", i, n, n, curr->neurons[n].bias, n, j,
-                                           curr->neurons[n].weight[j]);
-                            }
-                            printf("\n");
-                    }
-            }
-            */
+        if (do_train) {
+                neural_network *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 5);
 
-        train_network(construct_network, split_data, 100);
+                _train_network(init_network, load_data, epochs);
+        }
 
-        /*
-            free_dataset(dataset);
-            dataset = NULL;
-            dataset = split_data;
-            split_data->X = NULL;
-            split_data->Y = NULL;
-            free_dataset(split_data);
-        */
+        if (do_validate) {
+        }
+        if (do_predict) {
+                neural_network *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 5);
 
-        split_data->X = NULL;
-        split_data->Y = NULL;
-        free_dataset(split_data);
-        split_data = NULL;
-        free_dataset(dataset);
-        dataset = NULL;
+                predict_(init_network, load_data->x_test, load_data->y_test,
+                         load_data->test_size, load_data->input_features);
+        }
 
         return 0;
 }
