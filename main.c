@@ -1,12 +1,13 @@
 #include "File/file.h"
 #include "File/memory.h"
+#include <assert.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 
 int main(int argc, char *argv[]) {
 
-        if (argc < 1) {
+        if (argc < 0) {
                 printf("Usage: %s -dataset <name> <test-size> [-train "
                        "'epochs'|-predict]\n",
                        argv[0]);
@@ -17,7 +18,7 @@ int main(int argc, char *argv[]) {
         _Bool load_dataset_;
         float test_size;
 
-        _Bool do_train, do_validate, do_predict;
+        _Bool do_train = 0, do_validate = 0, do_predict = 0;
         size_t epochs = 0;
 
         for (int i = 1; i < argc; i++) {
@@ -29,10 +30,13 @@ int main(int argc, char *argv[]) {
 
                 if (strcmp(argv[i], "-train") == 0 && i + 1 < argc) {
                         epochs = atoi(argv[++i]);
-                        printf("Number of epochs: %zu\n", epochs);
                         do_train = 1;
+                        (epochs == 0)
+                            ? assert(epochs)
+                            : printf("Number of epochs: %zu\n", epochs);
+                        ;
 
-                } else if (strcmp(argv[i], "-predict") == 0) {
+                } else if (strcmp(argv[i], "-test") == 0) {
                         do_predict = 1;
                 } else if (strcmp(argv[i], "-val") == 0) {
                         do_validate = 1;
@@ -70,17 +74,31 @@ int main(int argc, char *argv[]) {
                     Feed_Forward_Network(in_hi_ou_layers, 5);
 
                 _train_network(init_network, load_data, epochs);
-        }
 
-        if (do_validate) {
-        }
-        if (do_predict) {
+        } else if (do_validate) {
                 neural_network *init_network =
                     Feed_Forward_Network(in_hi_ou_layers, 5);
 
-                predict_(init_network, load_data->x_test, load_data->y_test,
+                neural_network *load_network_weights =
+                    load_model(init_network, "model_weights.txt");
+
+                validate_network(load_network_weights, load_data->x_val,
+                                 load_data->y_val, load_data->val_size,
+                                 load_data->input_features);
+        } else if (do_predict) {
+
+                neural_network *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 5);
+                neural_network *load_network_weights =
+                    load_model(init_network, "model_weights.txt");
+
+                predict_(load_network_weights, load_data->x_test, load_data->y_test,
                          load_data->test_size, load_data->input_features);
         }
 
+        printf("Train ? %d\t Val ? %d\t Test %d\n", do_train, do_validate,
+               do_predict);
+
+        free_dataset(load_data);
         return 0;
 }
