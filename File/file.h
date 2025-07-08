@@ -6,15 +6,21 @@
 typedef struct {
         float **x_train;
         float **x_test;
+        float **x_val;
         int **y_train;
         int **y_test;
+        int **y_val;
+
         float **X;
         int **Y;
+
         size_t samples;
-        size_t train_samples;
-        size_t test_samples;
+        size_t train_size;
+        size_t test_size;
+        size_t val_size;
         size_t input_features;
         size_t output_labels;
+
 } dataset_handler;
 
 dataset_handler *load_dataset(const char *);
@@ -27,6 +33,9 @@ void _train_network(neural_network *, dataset_handler *, const size_t);
 void gradient_descent(float *);
 void display_network(neural_network *);
 void _save_model_(neural_network *, const char *);
-neural_network* load_model(neural_network *, const char *);
+void predict_(neural_network *, float **, int **, size_t, size_t);
+void validate_network(neural_network *, float **, int **, size_t, size_t);
+char *one_hot_decoder(int *x);
+neural_network *load_model(neural_network *, const char *);
 
 #endif
