@@ -62,11 +62,14 @@ int main(int argc, char *argv[]) {
                                "Please enter a valid Train/Test size ratio\n");
         }
 
-        dataset_handler *load_data = load_dataset(Dataset);
+        int total_output_class = get_output_labels(Dataset);
+        dataset_handler *load_data = load_dataset(Dataset, total_output_class);
 
         load_data = train_test_split(load_data, test_size, 42);
+        load_data->total_output_class = total_output_class;
 
-        size_t in_hi_ou_neurons[] = {load_data->input_features, 10, 10, 10, 3};
+        size_t in_hi_ou_neurons[] = {load_data->input_features, 10, 10, 10,
+                                     load_data->total_output_class};
         size_t *in_hi_ou_layers = in_hi_ou_neurons;
 
         if (do_train) {
@@ -91,13 +94,15 @@ int main(int argc, char *argv[]) {
                     Feed_Forward_Network(in_hi_ou_layers, 5);
                 neural_network *load_network_weights =
                     load_model(init_network, "model_weights.txt");
-
-                predict_(load_network_weights, load_data->x_test, load_data->y_test,
-                         load_data->test_size, load_data->input_features);
+                predict_(load_network_weights, load_data->x_test,
+                         load_data->y_test, load_data->test_size,
+                         load_data->input_features,
+                         load_data->total_output_class);
         }
 
         printf("Train ? %d\t Val ? %d\t Test %d\n", do_train, do_validate,
                do_predict);
+        printf("Output labels: %zu\n", load_data->total_output_class);
 
         free_dataset(load_data);
         return 0;
