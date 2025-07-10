@@ -1,4 +1,6 @@
-# NeuralNet-C ![Neural Network Architecture](images/neural_image.svg)
+<h1>
+  <img src="images/neural_image.svg" width="100" height="100" style="vertical-align:middle;"/> NeuralNet-C
+</h1>
 
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 
