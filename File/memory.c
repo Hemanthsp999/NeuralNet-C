@@ -53,3 +53,25 @@ void free_dataset(dataset_handler *dataset) {
         free(dataset);
         dataset = NULL;
 }
+
+void free_network(NeuralNetwork *network) {
+        if (!network) {
+                fprintf(stderr, "Error while processing the Network.\n");
+                return exit(EXIT_FAILURE);
+        }
+
+        size_t totalNetworkLayers = network->num_layers;
+        for (size_t l = 0; l < totalNetworkLayers - 1; l++) {
+                Layer *curr = &network->neural_layers[l];
+                for (size_t j = 0; j < curr->num_neurons; j++) {
+                        free(curr->neurons[j].weight);
+                        curr->neurons[j].weight = NULL;
+                }
+                free(curr->neurons);
+                curr->neurons = NULL;
+        }
+
+        free(network->neural_layers);
+        network->neural_layers = NULL;
+        free(network);
+}
