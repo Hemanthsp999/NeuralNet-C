@@ -11,6 +11,7 @@ typedef struct {
         size_t cols;
 } matrix;
 
+/* Chain link structure */
 typedef struct {
         float val;
         float bias;
@@ -19,28 +20,29 @@ typedef struct {
 } Neuron;
 
 typedef struct {
-        size_t num_neurons; // holds the number of neurons in the layer
-        Neuron *neurons;    // holds neuron val and weight
+        size_t num_neurons; // -> holds the number of neurons in the layer
+        Neuron *neurons;    // -> holds neuron val, weight, bias and delta
 
-        float **m_w;
-        float *m_b;
-        float **v_w;
-        float *v_b;
+        /* Adam optimizer handler*/
+        float **m_w; // momentum weights
+        float *m_b;  // momentum bias
+        float **v_w; // velocity weights
+        float *v_b;  // velocity bias
 } Layer;
 
 typedef struct {
         size_t num_layers;
-        Layer *neural_layers; /* is a pointer to array, helps to trace the layer
-                                     wise neurons and perform forwardpass */
-} neural_network;
+        Layer *neural_layers; /* is a pointer, helps to trace the layer
+                                     wise neurons */
+} NeuralNetwork;
 
 matrix *_Multiplication(matrix, matrix);
 matrix *_Addition(matrix, matrix);
 matrix *_Transpose(matrix);
 
-neural_network *Feed_Forward_Network(size_t *, size_t);
-void back_propagation(neural_network *, int *, Layer *);
-void forward_pass(neural_network *, float *);
+NeuralNetwork *Feed_Forward_Network(size_t *, size_t);
+void back_propagation(NeuralNetwork *, int *, Layer *);
+void forward_pass(NeuralNetwork *, float *, _Bool);
 float assign_random_value(int);
 
 #endif

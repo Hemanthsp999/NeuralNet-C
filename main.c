@@ -19,6 +19,7 @@ int main(int argc, char *argv[]) {
         float test_size;
 
         _Bool do_train = 0, do_validate = 0, do_predict = 0;
+        _Bool debug = 0;
         size_t epochs = 0;
 
         for (int i = 1; i < argc; i++) {
@@ -40,6 +41,8 @@ int main(int argc, char *argv[]) {
                         do_predict = 1;
                 } else if (strcmp(argv[i], "-val") == 0) {
                         do_validate = 1;
+                } else if (strcmp(argv[i], "-debug") == 0) {
+                        debug = 1;
                 }
 
                 if (strcmp(argv[i], "-help") == 0) {
@@ -68,40 +71,43 @@ int main(int argc, char *argv[]) {
         load_data = train_test_split(load_data, test_size, 42);
         load_data->total_output_class = total_output_class;
 
-        size_t in_hi_ou_neurons[] = {load_data->input_features, 10, 10, 10,
+        size_t in_hi_ou_neurons[] = {load_data->input_features, 256,
                                      load_data->total_output_class};
         size_t *in_hi_ou_layers = in_hi_ou_neurons;
 
         if (do_train) {
-                neural_network *init_network =
-                    Feed_Forward_Network(in_hi_ou_layers, 5);
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
 
-                _train_network(init_network, load_data, epochs);
+                _train_network(init_network, load_data, epochs, debug);
 
         } else if (do_validate) {
-                neural_network *init_network =
-                    Feed_Forward_Network(in_hi_ou_layers, 5);
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
 
-                neural_network *load_network_weights =
+                NeuralNetwork *load_network_weights =
                     load_model(init_network, "model_weights.txt");
 
                 validate_network(load_network_weights, load_data->x_val,
                                  load_data->y_val, load_data->val_size,
-                                 load_data->input_features);
+                                 load_data->input_features, debug);
+                free_network(load_network_weights);
         } else if (do_predict) {
 
-                neural_network *init_network =
-                    Feed_Forward_Network(in_hi_ou_layers, 5);
-                neural_network *load_network_weights =
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
+                NeuralNetwork *load_network_weights =
                     load_model(init_network, "model_weights.txt");
                 predict_(load_network_weights, load_data->x_test,
                          load_data->y_test, load_data->test_size,
                          load_data->input_features,
-                         load_data->total_output_class);
+                         load_data->total_output_class, debug);
+
+                free_network(load_network_weights);
         }
 
-        printf("Train ? %d\t Val ? %d\t Test %d\n", do_train, do_validate,
-               do_predict);
+        printf("Train ? %d\t Val ? %d\t Test %d\t Debug: %d\n", do_train,
+               do_validate, do_predict, debug);
         printf("Output labels: %zu\n", load_data->total_output_class);
 
         free_dataset(load_data);

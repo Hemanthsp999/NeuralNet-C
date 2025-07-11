@@ -129,7 +129,7 @@ void soft_max(Layer *output_layer_vals) {
         }
 }
 
-void l2_regularization(neural_network *processed_network, float lambda) {
+void l2_regularization(NeuralNetwork *processed_network, float lambda) {
         if (processed_network == NULL) {
                 fprintf(stderr,
                         "Error, The given network or output is empty.\n");
@@ -156,7 +156,7 @@ void l2_regularization(neural_network *processed_network, float lambda) {
 }
 
 /* Initialize Adam optimizer arrays */
-void _init_adam_optimizer(neural_network *network) {
+void _init_adam_optimizer(NeuralNetwork *network) {
         // Initialize Adam optimizer arrays
         if (!network) {
                 fprintf(stderr,
@@ -228,8 +228,7 @@ void _init_adam_optimizer(neural_network *network) {
 }
 
 /* returns moment and velocity of adam optimizer */
-void __adam_update(neural_network *network, float learning_rate,
-                   int time_step) {
+void __adam_update(NeuralNetwork *network, float learning_rate, int time_step) {
         if (!network) {
                 fprintf(stderr, "Error: Network is NULL.\n");
                 exit(EXIT_FAILURE);
@@ -338,7 +337,7 @@ void __adam_update(neural_network *network, float learning_rate,
 }
 
 /* returns weight gradient difference of curr and next layer*/
-float get_weight_gradient(neural_network *network, size_t layer_i,
+float get_weight_gradient(NeuralNetwork *network, size_t layer_i,
                           size_t neuron_j, size_t neuron_k) {
         return (network->neural_layers[layer_i].neurons[neuron_j].val *
                 network->neural_layers[layer_i + 1].neurons[neuron_k].delta);

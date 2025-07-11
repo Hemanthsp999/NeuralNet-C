@@ -1,11 +1,67 @@
 #include "file.h"
 #include "Activation/activation.h"
 #include <assert.h>
+#include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
 #define MAX_LENGTH 1024
+#define MAX_LABEL_CLASS 200
+
+/* returns total output labels from dataset */
+size_t get_output_labels(char *fileName) {
+        if (!fileName) {
+                fprintf(stderr, "Error: Given file is Either corrupted or "
+                                "something went wrong\n");
+                return -1;
+        }
+
+        FILE *file = fopen(fileName, "r");
+        if (!fileName) {
+                fprintf(stderr, "Error while opening the file.\n");
+                return -1;
+        }
+
+        char line[MAX_LENGTH];
+        int label_count = 0;
+        char *unique_labels[MAX_LABEL_CLASS];
+        fgets(line, sizeof(line), file);
+        while (fgets(line, sizeof(line), file)) {
+
+                line[strcspn(line, "\r\n")] = 0;
+                char *token = strtok(line, ",");
+                char *last_token = NULL;
+
+                // track the last label and store it in last_token
+                while (token) {
+                        last_token = token;
+                        token = strtok(NULL, ",");
+                }
+
+                int found = 0;
+                // check if label is already present in unique_labels set
+                for (int i = 0; i < label_count; i++) {
+                        if (strcmp(unique_labels[i], last_token) == 0) {
+                                found = 1;
+                                break;
+                        }
+                }
+
+                if (!found && last_token) {
+                        unique_labels[label_count] = strdup(last_token);
+                        label_count++;
+                }
+        }
+
+        for (int i = 0; i < label_count; i++) {
+                printf("Debug output label: %s\n", unique_labels[i]);
+        }
+        printf("Total labels: %d\n", label_count);
+
+        fclose(file);
+        return label_count;
+}
 
 /* returns count of columns */
 size_t count_columns(char *line) {
@@ -19,9 +75,23 @@ size_t count_columns(char *line) {
         return count;
 }
 
-const int num_classes = 3;
+/* Decodes Integer Class to Output label*/
+char *one_hot_decoder(int x) {
 
-int *one_hot_encoder(const char *string) {
+        char *label_string = "";
+        if (x == 0) {
+                label_string = "Setosa";
+        } else if (x == 1) {
+                label_string = "Versicolor";
+        } else if (x == 2) {
+                label_string = "Virginica";
+        }
+
+        return label_string;
+}
+
+/* Encodes Output Label to Integer Class i.e: {"a", "b"} -> {0, 1} */
+int *one_hot_encoder(const char *string, size_t num_classes) {
         if (!string) {
                 fprintf(stderr, "Please enter a valid string: %s\n", string);
                 exit(EXIT_FAILURE);
@@ -34,7 +104,7 @@ int *one_hot_encoder(const char *string) {
                 assert(encoder);
         }
 
-        for (int i = 0; i < num_classes; i++) {
+        for (int i = 0; i < (int)num_classes; i++) {
                 encoder[i] = 0;
         }
 
@@ -72,8 +142,8 @@ int *one_hot_encoder(const char *string) {
         return encoder;
 }
 
-/* returns dataset(X, Y) */
-dataset_handler *load_dataset(const char *file_path) {
+/* returns dataset -> X feature | Y labels*/
+dataset_handler *load_dataset(const char *file_path, size_t num_output_class) {
         FILE *file = fopen(file_path, "r");
         if (!file) {
                 fprintf(stderr, "Error while opening the file\n");
@@ -109,13 +179,15 @@ dataset_handler *load_dataset(const char *file_path) {
 
         /* read the dataset and extract first row*/
         fgets(line, sizeof(line), file);
+
         int total_columns = count_columns(line);
         printf("Total number of Columns: %d\n", total_columns);
+
         size_t input_features = total_columns - 1;
         printf("Input feature: %ld\n", input_features);
 
-        int output_labels = 1;
-        printf("Output label: %d\n", output_labels);
+        int output_cols = total_columns - input_features;
+        printf("Output label: %d\n", output_cols);
         size_t samples = 1;
 
         // count total size of data inside dataset
@@ -124,6 +196,7 @@ dataset_handler *load_dataset(const char *file_path) {
         }
 
         printf("The count of samples: %ld\n", samples);
+
         // re-initialize curr position to the starting
         rewind(file);
 
@@ -146,12 +219,16 @@ dataset_handler *load_dataset(const char *file_path) {
                 fprintf(stderr, "Error while allocating memory for X and Y.\n");
                 assert(handler->Y);
         }
+
         /* Initialize other fields to null*/
         handler->x_train = NULL;
         handler->x_test = NULL;
+        handler->x_val = NULL;
+        handler->y_val = NULL;
         handler->y_train = NULL;
         handler->y_test = NULL;
 
+        /* time complexity -> O(n)*/
         for (size_t i = 0; i < samples; i++) {
                 handler->X[i] = (float *)calloc(input_features, sizeof(float));
                 if (!handler->X[i]) {
@@ -160,7 +237,7 @@ dataset_handler *load_dataset(const char *file_path) {
                         exit(1);
                 }
 
-                handler->Y[i] = (int *)calloc(output_labels, sizeof(int));
+                handler->Y[i] = (int *)calloc(output_cols, sizeof(int));
                 if (!handler->Y[i]) {
                         fprintf(
                             stderr,
@@ -180,7 +257,7 @@ dataset_handler *load_dataset(const char *file_path) {
                         token = strtok(NULL, ",");
                 }
 
-                handler->Y[row] = one_hot_encoder(token);
+                handler->Y[row] = one_hot_encoder(token, num_output_class);
 
                 row++;
         }
@@ -188,12 +265,14 @@ dataset_handler *load_dataset(const char *file_path) {
         fclose(file);
 
         handler->input_features = input_features;
-        handler->output_labels = output_labels;
+        handler->output_labels = output_cols;
+        printf("OutputLabels: %d\n", output_cols);
         handler->samples = samples;
+        handler->total_output_class = num_output_class;
         return handler;
 }
 
-/* returns Train and Test dataset */
+/* returns Train, Val and Test sets */
 dataset_handler *train_test_split(dataset_handler *dataset, float test_size,
                                   size_t random_state) {
         if (!dataset) {
@@ -201,7 +280,6 @@ dataset_handler *train_test_split(dataset_handler *dataset, float test_size,
                 assert(!dataset);
         }
 
-        // dataset_handler *shuffled_data =
         dataset =
             shuffle_dataset(dataset->X, dataset->Y, test_size, dataset->samples,
                             random_state, dataset->input_features);
@@ -209,6 +287,7 @@ dataset_handler *train_test_split(dataset_handler *dataset, float test_size,
         return dataset;
 }
 
+/* returns randomly shuffled train, val and test data */
 dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
                                  size_t samples, size_t random_state,
                                  size_t input_features) {
@@ -222,8 +301,10 @@ dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
         }
 
         size_t total_samples = samples;
-        size_t test_samples = (size_t)(total_samples * test_size);
-        size_t train_samples = total_samples - test_samples;
+        size_t test_val_samples = (size_t)(total_samples * test_size);
+        size_t test_samples = test_val_samples / 2;
+        size_t validation_size = test_val_samples / 2;
+        size_t train_samples = total_samples - test_val_samples;
 
         /* create a indices */
         size_t *indices = (size_t *)malloc(total_samples * sizeof(size_t));
@@ -241,7 +322,15 @@ dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
                 indices[j] = tmp;
         }
 
-        printf("Split size (Test size(20)): %f\n", test_size);
+        float train_percent = ((float)train_samples / total_samples);
+        float test_percent = ((float)test_samples / total_samples);
+        float val_percent = ((float)validation_size / total_samples);
+
+        printf("Split: Train(%f Percent): %zu\t Validation(%f Percent): %zu\t "
+               "Test(%f Percent): %zu\n",
+               round(100.0 * train_percent), train_samples,
+               round(val_percent * 100), validation_size,
+               round(test_percent * 100), test_samples);
 
         dataset_handler *new_data =
             (dataset_handler *)malloc(sizeof(dataset_handler));
@@ -256,63 +345,76 @@ dataset_handler *shuffle_dataset(float **X, int **Y, float test_size,
         }
         new_data->input_features = input_features;
 
+        new_data->X = (float **)malloc(samples * sizeof(float *));
+        new_data->Y = (int **)malloc(samples * sizeof(int *));
         new_data->x_train = (float **)malloc(train_samples * sizeof(float *));
         new_data->y_train = (int **)malloc(train_samples * sizeof(int *));
         new_data->x_test = (float **)malloc(test_samples * sizeof(float *));
         new_data->y_test = (int **)malloc(test_samples * sizeof(int *));
+        new_data->x_val = (float **)malloc(validation_size * sizeof(float *));
+        new_data->y_val = (int **)malloc(validation_size * sizeof(int *));
 
         if (!new_data->x_train || !new_data->y_train || !new_data->x_test ||
-            !new_data->y_test) {
+            !new_data->y_test || !new_data->x_val || !new_data->y_val) {
                 fprintf(stderr, "Memory allocation failed for training/testing "
                                 "data. source: shuffle_dataset()\n");
                 exit(EXIT_FAILURE);
         }
 
+        for (size_t i = 0; i < samples; i++) {
+                new_data->X[i] = calloc(input_features, sizeof(float));
+                for (size_t j = 0; j < input_features; j++) {
+                        new_data->X[i][j] = X[i][j];
+                }
+                new_data->Y[i] = Y[i];
+        }
+
+        /* Training Set */
         for (size_t i = 0; i < train_samples; i++) {
                 new_data->x_train[i] =
                     (float *)calloc(input_features, sizeof(float));
                 for (size_t j = 0; j < input_features; j++) {
                         new_data->x_train[i][j] = X[indices[i]][j];
                 }
-                /* copy entire Y pointer to y_train */
-                // new_data->y_train[i] = strdup(Y[indices[i]]);
                 new_data->y_train[i] = Y[indices[i]];
         }
 
+        /* Validation Set */
+        for (size_t i = 0; i < validation_size; i++) {
+                new_data->x_val[i] =
+                    (float *)calloc(input_features, sizeof(float));
+                for (size_t j = 0; j < input_features; j++) {
+                        new_data->x_val[i][j] =
+                            X[indices[train_samples + i]][j];
+                }
+                new_data->y_val[i] = Y[indices[train_samples + i]];
+        }
+
+        /* Testing Set */
         for (size_t i = 0; i < test_samples; i++) {
                 new_data->x_test[i] =
                     (float *)calloc(input_features, sizeof(float));
                 for (size_t j = 0; j < input_features; j++) {
                         new_data->x_test[i][j] =
-                            X[indices[train_samples + i]][j];
+                            X[indices[train_samples + validation_size + i]][j];
                 }
                 /* copy entire Y pointer to y_test */
                 // new_data->y_test[i] = strdup(Y[indices[train_samples + i]]);
-                new_data->y_test[i] = Y[indices[train_samples + i]];
+                new_data->y_test[i] =
+                    Y[indices[train_samples + validation_size + i]];
         }
-        /*
-            new_data->X = (float **)malloc(samples * sizeof(float));
-            new_data->Y = (char **)malloc(samples * sizeof(char));
 
-            for (size_t i = 0; i < samples; i++) {
-                    new_data->X[i] = calloc(input_features, sizeof(float));
-                    for (size_t j = 0; j < input_features; j++) {
-                            new_data->X[i][j] = X[i][j];
-                    }
-
-                    new_data->Y[i] = strdup(Y[i]);
-            }
-        */
         new_data->samples = samples;
-        new_data->train_samples = train_samples;
-        new_data->test_samples = test_samples;
+        new_data->train_size = train_samples;
+        new_data->val_size = validation_size;
+        new_data->test_size = test_samples;
 
         free(indices);
         return new_data;
 }
 
-void _train_network(neural_network *network, dataset_handler *dataset,
-                    const size_t epochs) {
+void _train_network(NeuralNetwork *network, dataset_handler *dataset,
+                    const size_t epochs, _Bool debug) {
         if (!network || !dataset) {
                 fprintf(stderr,
                         "The network is empty or the dataset is NULL.\n");
@@ -320,10 +422,10 @@ void _train_network(neural_network *network, dataset_handler *dataset,
         }
 
         printf("Input Features: %ld train_samples: %ld \n",
-               dataset->input_features, dataset->train_samples);
+               dataset->input_features, dataset->train_size);
 
         printf("Starting training with %ld epochs\n", epochs);
-        size_t num_classes = 3;
+        size_t num_classes = dataset->total_output_class;
 
         _init_adam_optimizer(network);
         float learning_rate = 0.05f;
@@ -334,7 +436,7 @@ void _train_network(neural_network *network, dataset_handler *dataset,
                        epochs);
                 float total_error = 0.0f;
 
-                for (size_t i = 0; i < dataset->train_samples; i++) {
+                for (size_t i = 0; i < dataset->train_size; i++) {
                         time_step++;
                         // Extract input features for this sample
                         float input_features[dataset->input_features];
@@ -351,12 +453,12 @@ void _train_network(neural_network *network, dataset_handler *dataset,
                         // Log only every 10th sample to avoid console flood
                         if (i % 10 == 0) {
                                 printf("Processing sample %zu/%zu...\n", i + 1,
-                                       dataset->train_samples);
+                                       dataset->train_size);
                         }
 
                         // Forward pass
 
-                        forward_pass(network, input_features);
+                        forward_pass(network, input_features, debug);
 
                         // Calculate error for logging (mean squared error)
                         /*
@@ -398,7 +500,7 @@ void _train_network(neural_network *network, dataset_handler *dataset,
         _save_model_(network, "model_weights.txt");
 }
 
-void display_network(neural_network *network) {
+void display_network(NeuralNetwork *network) {
         if (!network) {
                 fprintf(stderr, "Error\n");
                 assert(network);
@@ -414,7 +516,7 @@ void display_network(neural_network *network) {
         }
 }
 
-void _save_model_(neural_network *network, const char *file_name) {
+void _save_model_(NeuralNetwork *network, const char *file_name) {
 
         if (!network) {
                 fprintf(stderr, "Error: The network is not constructed.\n");
@@ -493,7 +595,7 @@ void _save_model_(neural_network *network, const char *file_name) {
 }
 
 /* returns original network weights and biases */
-neural_network *load_model(neural_network *network, const char *file_name) {
+NeuralNetwork *load_model(NeuralNetwork *network, const char *file_name) {
 
         if (!network) {
                 fprintf(stderr, "Error: There's some error in network.\n");
@@ -654,4 +756,137 @@ neural_network *load_model(neural_network *network, const char *file_name) {
 
         free(each_layer_neurons);
         return network;
+}
+
+/* returns performance and accuracy of validation network */
+void validate_network(NeuralNetwork *network, float **x_val, int **y_val,
+                      size_t val_size, size_t input_features, _Bool debug) {
+
+        if (!network) {
+                fprintf(stderr, "Error: Something error in the network\n");
+                assert(network);
+        }
+
+        if (!x_val || !y_val) {
+                fprintf(stderr, "Error");
+                return exit(EXIT_FAILURE);
+        }
+        printf("Function is in Validation phase: \n");
+
+        printf("Validation Size: %zu | Total Samples: %zu\n", val_size,
+               input_features);
+
+        int correct_label = 0;
+        size_t num_class = 3;
+        for (size_t i = 0; i < val_size; i++) {
+                float input_neurons_val[input_features];
+                for (size_t j = 0; j < input_features; j++) {
+                        input_neurons_val[j] = x_val[i][j];
+                }
+
+                forward_pass(network, input_neurons_val, debug);
+                float max_val = -1e9;
+                int predicted_class = -1;
+                for (size_t k = 0; k < num_class; k++) {
+                        float output_val =
+                            network->neural_layers[network->num_layers - 1]
+                                .neurons[k]
+                                .val;
+
+                        printf("Predicted value: %f\t | Original Class: %d\n",
+                               output_val, y_val[i][k]);
+                        if (output_val > max_val) {
+                                max_val = output_val;
+                                predicted_class = k;
+                        }
+                }
+
+                int true_class = 0;
+                for (size_t k = 0; k < num_class; k++) {
+                        if (y_val[i][k] == 1) {
+                                true_class = k;
+                                break;
+                        }
+                }
+                printf("True Class: %d\tPredicted Class: %d\n", true_class,
+                       predicted_class);
+                if (predicted_class == true_class) {
+                        correct_label++;
+                }
+        }
+
+        float accuracy = ((float)correct_label / val_size) * 100.0f;
+
+        printf("Correct: %d\n", correct_label);
+        printf("Accuracy: %.2f%%\n", accuracy);
+        printf("val size: %zu\n", val_size);
+}
+
+void predict_(NeuralNetwork *network, float **x_test, int **y_test,
+              size_t testSize, size_t input_features, size_t output_class,
+              _Bool debug) {
+        if (!network) {
+                fprintf(stderr,
+                        "Error: Network is not Initialized correctly.\n");
+                return exit(EXIT_FAILURE);
+        }
+
+        if (!x_test || !y_test) {
+                fprintf(stderr,
+                        "Error: Look at Input_features/Output_labels.\n");
+                return exit(EXIT_FAILURE);
+        }
+
+        int correct = 0;
+        printf("**************> Prediction: \n");
+        for (size_t i = 0; i < testSize; i++) {
+                float transform_input[input_features];
+                for (size_t j = 0; j < input_features; j++) {
+                        transform_input[j] = x_test[i][j];
+                        printf("Input Neurons: %f\n", transform_input[j]);
+                }
+
+                forward_pass(network, transform_input, debug);
+
+                float max_val = -1e9;
+                int predicted_class = -1;
+                for (size_t k = 0; k < 3; k++) {
+                        float output_label =
+                            network->neural_layers[network->num_layers - 1]
+                                .neurons[k]
+                                .val;
+
+                        printf("Original Label: %d\t|\t Predicted Label: %f\n",
+                               y_test[i][k], output_label);
+
+                        if (output_label > max_val) {
+                                max_val = output_label;
+                                predicted_class = k;
+                        }
+                }
+                int true_class = 0;
+                for (size_t k = 0; k < output_class; k++) {
+                        if (y_test[i][k] == 1) {
+                                true_class = k;
+                                break;
+                        }
+                }
+                printf("True class index[0->Setosa, 1->Versicolor, "
+                       "2->Virginica]: %d\t|\tPredicted class index: %d\n",
+                       true_class, predicted_class);
+
+                printf("True label[0->Setosa, 1->Versicolor, 2->Virginica]: "
+                       "%s\t|\tPredicted label: %s\n",
+                       one_hot_decoder(true_class),
+                       one_hot_decoder(predicted_class));
+
+                if (predicted_class == true_class) {
+                        correct++;
+                }
+                printf("\n");
+        }
+
+        float accuracy = ((float)correct / testSize) * 100.f;
+        printf("Correct Prediction: %d / %zu\t|\tAccuracy: %f\n", correct,
+               testSize, accuracy);
 }
