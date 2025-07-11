@@ -321,7 +321,7 @@ void __adam_update(NeuralNetwork *network, float learning_rate, int time_step) {
                         // Update second moment (velocity) for bias
                         layer->v_b[j] =
                             beta2 * layer->v_b[j] +
-                            (1.0f - beta2) * bias_gradient * bias_gradient;
+                            (1.0f - beta2) * (bias_gradient * bias_gradient);
 
                         // Bias correction
                         float m_hat_bias =
