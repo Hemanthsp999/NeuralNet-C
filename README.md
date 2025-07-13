@@ -45,4 +45,10 @@ finally its ready to use.
 ./zig-out/bin/test -dataset "dataset_name.csv" "train-test-split ratio" -test
 ```
 
+4. Help(if required)
+
+```bash
+./zig-out/bin/test -help
+```
+
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
