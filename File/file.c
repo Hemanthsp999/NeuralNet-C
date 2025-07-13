@@ -258,7 +258,6 @@ dataset_handler *load_dataset(const char *file_path, size_t num_output_class) {
                 }
 
                 handler->Y[row] = one_hot_encoder(token, num_output_class);
-
                 row++;
         }
 
@@ -871,8 +870,9 @@ void predict_(NeuralNetwork *network, float **x_test, int **y_test,
                                 break;
                         }
                 }
-                printf("True class index[0->Setosa, 1->Versicolor, "
-                       "2->Virginica]: %d\t|\tPredicted class index: %d\n",
+                printf("[0->Setosa, 1->Versicolor, "
+                       "2->Virginica]True class index: %d\t|\tPredicted class "
+                       "index: %d\n",
                        true_class, predicted_class);
 
                 printf("True label[0->Setosa, 1->Versicolor, 2->Virginica]: "

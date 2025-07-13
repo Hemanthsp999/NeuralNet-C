@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 int main(int argc, char *argv[]) {
 
@@ -15,6 +16,7 @@ int main(int argc, char *argv[]) {
         }
 
         char *Dataset = NULL;
+        clock_t start, end;
         _Bool load_dataset_;
         float test_size;
 
@@ -79,7 +81,13 @@ int main(int argc, char *argv[]) {
                 NeuralNetwork *init_network =
                     Feed_Forward_Network(in_hi_ou_layers, 3);
 
+                start = clock();
                 _train_network(init_network, load_data, epochs, debug);
+                end = clock();
+                double get_time_usage =
+                    ((double)(end - start)) / CLOCKS_PER_SEC;
+                printf("Total time taken to train %zu epochs %f secs\n", epochs,
+                       get_time_usage);
 
         } else if (do_validate) {
                 NeuralNetwork *init_network =
