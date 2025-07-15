@@ -11,7 +11,10 @@ systems control, and deployment in constrained environments.
 
 ## How to use ?
 
-Clone the repo and cd project_dir
+The model can be used in two ways: 
+     1. Using command flags like -trian, -val and -test | 2. Use it as library
+
+Clone the repo and cd to project_dir
 
 ```bash
 git clone <project_repo>
@@ -26,6 +29,8 @@ zig build
 ```
 
 finally its ready to use.
+
+## Using command flags:
 
 1. Train network
 
@@ -50,5 +55,77 @@ finally its ready to use.
 ```bash
 ./zig-out/bin/test -help
 ```
+
+## Library:
+
+1. Load and split dataset. Assign neurons and size of layers.
+
+```bash
+                const* dataset_name = "dataset_name";
+
+                /* Get number of output labels that model has */
+                int total_output_class = get_output_labels(dataset_name);
+
+                /* load dataset */
+                dataset_handler* load_data = load_dataset(dataset_name);
+
+                /* split the dataset into train, val and test */
+                load_data = train_test_split(load_data, test_size, 42); // (dataset, train/test ratio, random_state)
+
+                /* assign number of neurons you want in each layer excluding input and output layer */
+                size_t in_hi_ou_neurons[] = {load_data->input_features, 256, load_data->total_output_class}; // {load_data->input_features, 10, 10, load_data->total_output_class}
+                size_t *in_hi_ou_layers = in_hi_ou_neurons;
+
+```
+
+2. Initialize, Train network and save model weights.
+
+```bash
+                _Bool debug = 0; // If you want to debug ? change it to 1
+
+                /* Initialize network weights and biases*/
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
+
+                /* Train Network */
+                _train_network(init_network, load_data, epochs, debug);
+```
+
+After training it generate a "model_weights.txt" file.
+
+3. Load weights and Val/Test the network
+
+Validation:
+
+```bash
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
+
+                /* load model weights */
+                NeuralNetwork *load_network_weights =
+                    load_model(init_network, "model_weights.txt");
+
+                validate_network(load_network_weights, load_data->x_val,
+                                 load_data->y_val, load_data->val_size,
+                                 load_data->input_features, debug);
+```
+
+Testing:
+
+```bash
+                NeuralNetwork *init_network =
+                    Feed_Forward_Network(in_hi_ou_layers, 3);
+
+                /* load model weights */
+                NeuralNetwork *load_network_weights =
+                    load_model(init_network, "model_weights.txt");
+
+                predict_(load_network_weights, load_data->x_test,
+                         load_data->y_test, load_data->test_size,
+                         load_data->input_features,
+                         load_data->total_output_class, debug);
+```
+
+4. Most importantly **deallocate** the memory.
 
 This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
