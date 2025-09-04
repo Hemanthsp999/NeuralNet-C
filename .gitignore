@@ -5,3 +5,5 @@ Activation/activation.o
 Neural/neural.o
 File/file.o
 File/memory.o
+.cache/
+.zig-cache/
