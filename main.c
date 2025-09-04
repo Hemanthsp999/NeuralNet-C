@@ -1,3 +1,4 @@
+/* main.c */
 #include "File/file.h"
 #include "File/memory.h"
 #include <assert.h>
@@ -73,6 +74,8 @@ int main(int argc, char *argv[]) {
         load_data = train_test_split(load_data, test_size, 42);
         load_data->total_output_class = total_output_class;
 
+        /* Enter number of neurons in each layer except input and output layer:
+         */
         size_t in_hi_ou_neurons[] = {load_data->input_features, 256,
                                      load_data->total_output_class};
         size_t *in_hi_ou_layers = in_hi_ou_neurons;
@@ -89,6 +92,7 @@ int main(int argc, char *argv[]) {
                 printf("Total time taken to train %zu epochs %f secs\n", epochs,
                        get_time_usage);
 
+                free_network(init_network);
         } else if (do_validate) {
                 NeuralNetwork *init_network =
                     Feed_Forward_Network(in_hi_ou_layers, 3);

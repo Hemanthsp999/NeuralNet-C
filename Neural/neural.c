@@ -407,14 +407,4 @@ void back_propagation(NeuralNetwork *network, int *output_expected,
                 }
         }
 
-        /*
-            for (size_t i = 0; i < network->num_layers; i++) {
-
-                    for (size_t j = 0; j <
-           network->neural_layers[i].num_neurons; j++) { printf("\nNeuron Value:
-           %f ", network->neural_layers[i].neurons[j].val);
-                    }
-                    printf("\n");
-            }
-        */
 }
